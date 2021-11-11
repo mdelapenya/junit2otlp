@@ -56,8 +56,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_darwin_amd64/junit2otlp
-          asset_name: junit2otlp
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Darwin_arm64.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Darwin_arm64.tar.gz
           asset_content_type: application/x-binary
 
       - name: Upload Release Asset Darwin ARM64
@@ -67,8 +67,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_darwin_arm64/junit2otlp
-          asset_name: junit2otlp
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Darwin_x86_64.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Darwin_x86_64.tar.gz
           asset_content_type: application/x-binary
 
       - name: Upload Release Asset Linux 386
@@ -78,8 +78,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_linux_386/junit2otlp
-          asset_name: junit2otlp
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Linux_arm64.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Linux_arm64.tar.gz
           asset_content_type: application/x-binary
 
       - name: Upload Release Asset Linux AMD64
@@ -89,8 +89,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_linux_amd64/junit2otlp
-          asset_name: junit2otlp
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Linux_i386.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Linux_i386.tar.gz
           asset_content_type: application/x-binary
 
       - name: Upload Release Asset Linux ARM64
@@ -100,8 +100,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_linux_arm64/junit2otlp
-          asset_name: junit2otlp
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Linux_x86_64.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Linux_x86_64.tar.gz
           asset_content_type: application/x-binary
 
       - name: Upload Release Asset Windows 386
@@ -111,8 +111,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_windows_386/junit2otlp.exe
-          asset_name: junit2otlp.exe
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Windows_i386.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Windows_i386.tar.gz
           asset_content_type: application/x-binary
 
       - name: Upload Release Asset Windows AMD64
@@ -122,6 +122,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/junit2otlp_windows_amd64/junit2otlp.exe
-          asset_name: junit2otlp.exe
+          asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Windows_x86_64.tar.gz
+          asset_name: junit2otlp_$RESOLVED_VERSION-next_Windows_x86_64.tar.gz
           asset_content_type: application/x-binary
