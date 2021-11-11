@@ -10,6 +10,7 @@ import (
 
 	"github.com/joshdk/go-junit"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/metric"
@@ -117,21 +118,24 @@ func Main(ctx context.Context) error {
 
 	for _, suite := range suites {
 		totals := suite.Totals
-		log.Printf("TestSuite: %s-%s", suite.Package, suite.Name)
-		log.Printf("Tests: %v", suite.Tests)
-		log.Printf("Duration: %v", totals.Duration)
-		log.Printf("Errors: %v", totals.Error)
-		log.Printf("Failed: %v", totals.Failed)
-		log.Printf("Passed: %v", totals.Passed)
-		log.Printf("Skipped: %v", totals.Skipped)
-		log.Printf("Total: %v", totals.Tests)
 
-		durationCounter.Add(ctx, int64(totals.Duration.Milliseconds()))
-		errorCounter.Add(ctx, int64(totals.Error))
-		failedCounter.Add(ctx, int64(totals.Failed))
-		passedCounter.Add(ctx, int64(totals.Passed))
-		skippedCounter.Add(ctx, int64(totals.Skipped))
-		testsCounter.Add(ctx, int64(totals.Tests))
+		suiteName := attribute.KeyValue{
+			Key:   attribute.Key(TestsName),
+			Value: attribute.StringValue(suite.Name),
+		}
+		suitePackage := attribute.KeyValue{
+			Key:   attribute.Key(TestsPackage),
+			Value: attribute.StringValue(suite.Package),
+		}
+
+		labels := []attribute.KeyValue{suiteName, suitePackage}
+
+		durationCounter.Add(ctx, int64(totals.Duration.Milliseconds()), labels...)
+		errorCounter.Add(ctx, int64(totals.Error), labels...)
+		failedCounter.Add(ctx, int64(totals.Failed), labels...)
+		passedCounter.Add(ctx, int64(totals.Passed), labels...)
+		skippedCounter.Add(ctx, int64(totals.Skipped), labels...)
+		testsCounter.Add(ctx, int64(totals.Tests), labels...)
 	}
 
 	return nil
