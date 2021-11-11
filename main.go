@@ -75,7 +75,6 @@ func readFromPipe() ([]byte, error) {
 			return nil, err
 		}
 
-		fmt.Println(string(buf))
 		return buf, nil
 	}
 
