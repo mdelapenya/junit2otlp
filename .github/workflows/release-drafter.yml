@@ -58,7 +58,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Darwin_arm64.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Darwin_arm64.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
 
       - name: Upload Release Asset Darwin ARM64
         id: upload-release-asset-darwin-arm64
@@ -69,7 +69,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Darwin_x86_64.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Darwin_x86_64.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
 
       - name: Upload Release Asset Linux 386
         id: upload-release-asset-linux-386
@@ -80,7 +80,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Linux_arm64.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Linux_arm64.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
 
       - name: Upload Release Asset Linux AMD64
         id: upload-release-asset-linux-amd64
@@ -91,7 +91,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Linux_i386.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Linux_i386.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
 
       - name: Upload Release Asset Linux ARM64
         id: upload-release-asset-linux-arm64
@@ -102,7 +102,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Linux_x86_64.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Linux_x86_64.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
 
       - name: Upload Release Asset Windows 386
         id: upload-release-asset-windows-386
@@ -113,7 +113,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Windows_i386.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Windows_i386.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
 
       - name: Upload Release Asset Windows AMD64
         id: upload-release-asset-windows-amd64
@@ -124,4 +124,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./dist/junit2otlp_$RESOLVED_VERSION-next_Windows_x86_64.tar.gz
           asset_name: junit2otlp_$RESOLVED_VERSION-next_Windows_x86_64.tar.gz
-          asset_content_type: application/x-binary
+          asset_content_type: application/x-tar
