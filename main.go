@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/joshdk/go-junit"
@@ -17,27 +19,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
-var sampleXML = []byte(`
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites>
-	<testsuite name="JUnitXmlReporter" errors="0" tests="0" failures="0" time="0" timestamp="2013-05-24T10:23:58" />
-	<testsuite name="JUnitXmlReporter.constructor" errors="0" skipped="1" tests="3" failures="1" time="0.006" timestamp="2013-05-24T10:23:58">
-		<properties>
-			<property name="java.vendor" value="Sun Microsystems Inc." />
-			<property name="compiler.debug" value="on" />
-			<property name="project.jdk.classpath" value="jdk.classpath.1.6" />
-		</properties>
-		<testcase classname="JUnitXmlReporter.constructor" name="should default path to an empty string" time="0.006">
-			<failure message="test failure">Assertion failed</failure>
-		</testcase>
-		<testcase classname="JUnitXmlReporter.constructor" name="should default consolidate to true" time="0">
-			<skipped />
-		</testcase>
-		<testcase classname="JUnitXmlReporter.constructor" name="should default useDotNotation to true" time="0" />
-	</testsuite>
-</testsuites>
-`)
-
 func createIntCounter(meter metric.Meter, name string, description string) metric.Int64Counter {
 	return metric.Must(meter).
 		NewInt64Counter(
@@ -50,7 +31,7 @@ func initMetricsPusher(ctx context.Context) (*controller.Controller, error) {
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
 	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create the collector exporter: %v", err)
+		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
 	}
 
 	defer func() {
@@ -78,10 +59,32 @@ func initMetricsPusher(ctx context.Context) (*controller.Controller, error) {
 	return pusher, nil
 }
 
+func readFromPipe() ([]byte, error) {
+	stat, _ := os.Stdin.Stat()
+
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		var buf []byte
+		scanner := bufio.NewScanner(os.Stdin)
+
+		for scanner.Scan() {
+			buf = append(buf, scanner.Bytes()...)
+		}
+
+		if err := scanner.Err(); err != nil {
+			return nil, err
+		}
+
+		fmt.Println(string(buf))
+		return buf, nil
+	}
+
+	return nil, fmt.Errorf("there is no data in the pipe")
+}
+
 func Main(ctx context.Context) error {
 	pusher, err := initMetricsPusher(ctx)
 	if err != nil {
-		log.Fatalf("Failed to initialise pusher: %v", err)
+		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
 
 	defer func() {
@@ -102,9 +105,14 @@ func Main(ctx context.Context) error {
 	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
 	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
 
-	suites, err := junit.Ingest(sampleXML)
+	xmlBuffer, err := readFromPipe()
 	if err != nil {
-		log.Fatalf("failed to ingest JUnit xml %v", err)
+		return fmt.Errorf("failed to read from pipe: %v", err)
+	}
+
+	suites, err := junit.Ingest(xmlBuffer)
+	if err != nil {
+		return fmt.Errorf("failed to ingest JUnit xml: %v", err)
 	}
 
 	for _, suite := range suites {
