@@ -28,28 +28,32 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 		)
 }
 
-func initMetricsPusher(ctx context.Context) (*controller.Controller, *otlpmetric.Exporter, error) {
+func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
 	exp, err := otlpmetric.New(ctx, client)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create the collector exporter: %v", err)
+		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
 	}
 
+	return exp, nil
+}
+
+func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*controller.Controller, error) {
 	pusher := controller.New(
 		processor.NewFactory(
 			simple.NewWithExactDistribution(),
-			exp,
+			exporter,
 		),
-		controller.WithExporter(exp),
+		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 	global.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
-		return nil, nil, fmt.Errorf("could not start metric controller: %v", err)
+		return nil, fmt.Errorf("could not start metric controller: %v", err)
 	}
 
-	return pusher, exp, nil
+	return pusher, nil
 }
 
 func readFromPipe() ([]byte, error) {
@@ -74,11 +78,10 @@ func readFromPipe() ([]byte, error) {
 }
 
 func Main(ctx context.Context) error {
-	pusher, metricsExporter, err := initMetricsPusher(ctx)
+	metricsExporter, err := initMetricsExporter(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to initialise pusher: %v", err)
+		return fmt.Errorf("failed to initialise metrics exporter: %v", err)
 	}
-
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
@@ -86,6 +89,11 @@ func Main(ctx context.Context) error {
 			otel.Handle(err)
 		}
 	}()
+
+	pusher, err := initMetricsPusher(ctx, metricsExporter)
+	if err != nil {
+		return fmt.Errorf("failed to initialise pusher: %v", err)
+	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
