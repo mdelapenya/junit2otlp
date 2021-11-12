@@ -29,8 +29,7 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 }
 
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
-	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
-	exp, err := otlpmetric.New(ctx, client)
+	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
 	}
