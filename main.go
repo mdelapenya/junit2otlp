@@ -28,27 +28,22 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 		)
 }
 
-func initMetricsPusher(ctx context.Context) (*controller.Controller, error) {
-	client := otlpmetricgrpc.NewClient(otlpmetricgrpc.WithInsecure())
-	exp, err := otlpmetric.New(ctx, client)
+func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
+	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
 	}
 
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := exp.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
+	return exp, nil
+}
 
+func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*controller.Controller, error) {
 	pusher := controller.New(
 		processor.NewFactory(
 			simple.NewWithExactDistribution(),
-			exp,
+			exporter,
 		),
-		controller.WithExporter(exp),
+		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(2*time.Second),
 	)
 	global.SetMeterProvider(pusher)
@@ -75,7 +70,6 @@ func readFromPipe() ([]byte, error) {
 			return nil, err
 		}
 
-		fmt.Println(string(buf))
 		return buf, nil
 	}
 
@@ -83,11 +77,22 @@ func readFromPipe() ([]byte, error) {
 }
 
 func Main(ctx context.Context) error {
-	pusher, err := initMetricsPusher(ctx)
+	metricsExporter, err := initMetricsExporter(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to initialise metrics exporter: %v", err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		defer cancel()
+		if err := metricsExporter.Shutdown(ctx); err != nil {
+			otel.Handle(err)
+		}
+	}()
+
+	pusher, err := initMetricsPusher(ctx, metricsExporter)
 	if err != nil {
 		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
-
 	defer func() {
 		ctx, cancel := context.WithTimeout(ctx, time.Second)
 		defer cancel()
