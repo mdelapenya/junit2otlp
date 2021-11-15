@@ -1,12 +1,21 @@
 package main
 
 const (
+	// suite keys
 	FailedTestsCount  = "tests.failed"
 	ErrorTestsCount   = "tests.error"
 	PassedTestsCount  = "tests.passed"
 	SkippedTestsCount = "tests.skipped"
 	TestsDuration     = "tests.duration"
-	TestsName         = "tests.name"
-	TestsPackage      = "tests.package"
+	TestsSystemErr    = "tests.systemerr"
+	TestsSystemOut    = "tests.systemout"
 	TotalTestsCount   = "tests.total"
+
+	// test keys
+	TestClassName = "test.classname"
+	TestDuration  = "test.duration"
+	TestMessage   = "test.message"
+	TestStatus    = "test.status"
+	TestSystemErr = "test.systemerr"
+	TestSystemOut = "test.systemout"
 )
