@@ -43,6 +43,72 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 		)
 }
 
+func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
+	tracer := tracesProvides.Tracer("junit2otlp")
+	meter := global.Meter("junit2otlp")
+
+	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
+	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
+	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
+	passedCounter := createIntCounter(meter, PassedTestsCount, "Total number of passed tests")
+	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
+	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
+
+	ctx, outerSpan := tracer.Start(ctx, "junit2otlp", trace.WithAttributes(runtimeAttributes...))
+	defer outerSpan.End()
+
+	for _, suite := range suites {
+		totals := suite.Totals
+
+		suiteAttributes := []attribute.KeyValue{
+			semconv.CodeNamespaceKey.String(suite.Package),
+			attribute.Key("code.testsuite").String(suite.Name),
+			attribute.Key(TestsSystemErr).String(suite.SystemErr),
+			attribute.Key(TestsSystemOut).String(suite.SystemOut),
+			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
+		}
+
+		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
+		suiteAttributes = append(suiteAttributes, propsToLabels(suite.Properties)...)
+
+		durationCounter.Add(ctx, totals.Duration.Milliseconds(), suiteAttributes...)
+		errorCounter.Add(ctx, int64(totals.Error), suiteAttributes...)
+		failedCounter.Add(ctx, int64(totals.Failed), suiteAttributes...)
+		passedCounter.Add(ctx, int64(totals.Passed), suiteAttributes...)
+		skippedCounter.Add(ctx, int64(totals.Skipped), suiteAttributes...)
+		testsCounter.Add(ctx, int64(totals.Tests), suiteAttributes...)
+
+		ctx, suiteSpan := tracer.Start(ctx, suite.Name,
+			trace.WithAttributes(suiteAttributes...))
+		for _, test := range suite.Tests {
+			testAttributes := []attribute.KeyValue{
+				semconv.CodeFunctionKey.String(test.Name),
+				attribute.Key(TestDuration).Int64(test.Duration.Milliseconds()),
+				attribute.Key(TestClassName).String(test.Classname),
+				attribute.Key(TestMessage).String(test.Message),
+				attribute.Key(TestStatus).String(string(test.Status)),
+				attribute.Key(TestSystemErr).String(test.SystemErr),
+				attribute.Key(TestSystemOut).String(test.SystemOut),
+			}
+
+			testAttributes = append(testAttributes, propsToLabels(test.Properties)...)
+			testAttributes = append(testAttributes, suiteAttributes...)
+
+			if test.Error != nil {
+				testAttributes = append(testAttributes, attribute.Key("tests.error").String(test.Error.Error()))
+			}
+
+			_, testSpan := tracer.Start(ctx, test.Name,
+				trace.WithAttributes(testAttributes...))
+			testSpan.End()
+		}
+
+		suiteSpan.End()
+	}
+
+	return nil
+}
+
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
@@ -112,11 +178,11 @@ func readFromPipe() ([]byte, error) {
 }
 
 func Main(ctx context.Context) error {
-	provider, err := initTracerProvider(ctx)
+	tracesProvides, err := initTracerProvider(ctx)
 	if err != nil {
 		return err
 	}
-	defer provider.Shutdown(ctx)
+	defer tracesProvides.Shutdown(ctx)
 
 	metricsExporter, err := initMetricsExporter(ctx)
 	if err != nil {
@@ -143,16 +209,6 @@ func Main(ctx context.Context) error {
 		}
 	}()
 
-	tracer := provider.Tracer("junit2otlp")
-	meter := global.Meter("junit2otlp")
-
-	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
-	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
-	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
-	passedCounter := createIntCounter(meter, PassedTestsCount, "Total number of passed tests")
-	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
-	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
-
 	xmlBuffer, err := readFromPipe()
 	if err != nil {
 		return fmt.Errorf("failed to read from pipe: %v", err)
@@ -163,60 +219,7 @@ func Main(ctx context.Context) error {
 		return fmt.Errorf("failed to ingest JUnit xml: %v", err)
 	}
 
-	ctx, outerSpan := tracer.Start(ctx, "junit2otlp", trace.WithAttributes(runtimeAttributes...))
-
-	for _, suite := range suites {
-		totals := suite.Totals
-
-		suiteAttributes := []attribute.KeyValue{
-			semconv.CodeNamespaceKey.String(suite.Package),
-			attribute.Key("code.testsuite").String(suite.Name),
-			attribute.Key(TestsSystemErr).String(suite.SystemErr),
-			attribute.Key(TestsSystemOut).String(suite.SystemOut),
-			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
-		}
-
-		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
-		suiteAttributes = append(suiteAttributes, propsToLabels(suite.Properties)...)
-
-		durationCounter.Add(ctx, totals.Duration.Milliseconds(), suiteAttributes...)
-		errorCounter.Add(ctx, int64(totals.Error), suiteAttributes...)
-		failedCounter.Add(ctx, int64(totals.Failed), suiteAttributes...)
-		passedCounter.Add(ctx, int64(totals.Passed), suiteAttributes...)
-		skippedCounter.Add(ctx, int64(totals.Skipped), suiteAttributes...)
-		testsCounter.Add(ctx, int64(totals.Tests), suiteAttributes...)
-
-		ctx, suiteSpan := tracer.Start(ctx, suite.Name,
-			trace.WithAttributes(suiteAttributes...))
-		for _, test := range suite.Tests {
-			testAttributes := []attribute.KeyValue{
-				semconv.CodeFunctionKey.String(test.Name),
-				attribute.Key(TestDuration).Int64(test.Duration.Milliseconds()),
-				attribute.Key(TestClassName).String(test.Classname),
-				attribute.Key(TestMessage).String(test.Message),
-				attribute.Key(TestStatus).String(string(test.Status)),
-				attribute.Key(TestSystemErr).String(test.SystemErr),
-				attribute.Key(TestSystemOut).String(test.SystemOut),
-			}
-
-			testAttributes = append(testAttributes, propsToLabels(test.Properties)...)
-			testAttributes = append(testAttributes, suiteAttributes...)
-
-			if test.Error != nil {
-				testAttributes = append(testAttributes, attribute.Key("tests.error").String(test.Error.Error()))
-			}
-
-			_, testSpan := tracer.Start(ctx, test.Name,
-				trace.WithAttributes(testAttributes...))
-			testSpan.End()
-		}
-
-		suiteSpan.End()
-	}
-
-	outerSpan.End()
-
-	return nil
+	return createTracesAndSpans(ctx, tracesProvides, suites)
 }
 
 func main() {
