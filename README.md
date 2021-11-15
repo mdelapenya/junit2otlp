@@ -16,4 +16,6 @@ docker-compose up -d
 eval $(cat test.env)
 # Use the sample XML file and pass it to the binary
 cat TEST-sample.xml | go run *.go
+cat TEST-sample2.xml | go run *.go
+cat TEST-sample3.xml | go run *.go
 ```
