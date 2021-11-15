@@ -143,8 +143,8 @@ func Main(ctx context.Context) error {
 		}
 	}()
 
-	tracer := provider.Tracer("jUnit")
-	meter := global.Meter("jUnit")
+	tracer := provider.Tracer("junit2otlp")
+	meter := global.Meter("junit2otlp")
 
 	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
 	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
