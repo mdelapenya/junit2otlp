@@ -10,8 +10,10 @@ As jUnit represents a de-facto standard for test results in every programming la
 ## How to use it
 
 ```shell
-# Build the binary
-go build
+# Run back-end for storing traces and spans (using Elastic Stack for this purpose)
+docker-compose up -d
+# Set the environment with the OTLP endpoint
+eval $(cat test.env)
 # Use the sample XML file and pass it to the binary
-cat TEST-sample.xml | junit2otlp
+cat TEST-sample.xml | go run *.go
 ```
