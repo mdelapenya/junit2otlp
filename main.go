@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/joshdk/go-junit"
@@ -13,12 +14,26 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var runtimeAttributes []attribute.KeyValue
+
+func init() {
+	// initialise runtime keys
+	runtimeAttributes = []attribute.KeyValue{
+		semconv.HostArchKey.String(runtime.GOARCH),
+		semconv.OSNameKey.String(runtime.GOOS),
+	}
+}
 
 func createIntCounter(meter metric.Meter, name string, description string) metric.Int64Counter {
 	return metric.Must(meter).
@@ -26,6 +41,72 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 			name,
 			metric.WithDescription(description),
 		)
+}
+
+func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
+	tracer := tracesProvides.Tracer("junit2otlp")
+	meter := global.Meter("junit2otlp")
+
+	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
+	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
+	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
+	passedCounter := createIntCounter(meter, PassedTestsCount, "Total number of passed tests")
+	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
+	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
+
+	ctx, outerSpan := tracer.Start(ctx, "junit2otlp", trace.WithAttributes(runtimeAttributes...))
+	defer outerSpan.End()
+
+	for _, suite := range suites {
+		totals := suite.Totals
+
+		suiteAttributes := []attribute.KeyValue{
+			semconv.CodeNamespaceKey.String(suite.Package),
+			attribute.Key("code.testsuite").String(suite.Name),
+			attribute.Key(TestsSystemErr).String(suite.SystemErr),
+			attribute.Key(TestsSystemOut).String(suite.SystemOut),
+			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
+		}
+
+		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
+		suiteAttributes = append(suiteAttributes, propsToLabels(suite.Properties)...)
+
+		durationCounter.Add(ctx, totals.Duration.Milliseconds(), suiteAttributes...)
+		errorCounter.Add(ctx, int64(totals.Error), suiteAttributes...)
+		failedCounter.Add(ctx, int64(totals.Failed), suiteAttributes...)
+		passedCounter.Add(ctx, int64(totals.Passed), suiteAttributes...)
+		skippedCounter.Add(ctx, int64(totals.Skipped), suiteAttributes...)
+		testsCounter.Add(ctx, int64(totals.Tests), suiteAttributes...)
+
+		ctx, suiteSpan := tracer.Start(ctx, suite.Name,
+			trace.WithAttributes(suiteAttributes...))
+		for _, test := range suite.Tests {
+			testAttributes := []attribute.KeyValue{
+				semconv.CodeFunctionKey.String(test.Name),
+				attribute.Key(TestDuration).Int64(test.Duration.Milliseconds()),
+				attribute.Key(TestClassName).String(test.Classname),
+				attribute.Key(TestMessage).String(test.Message),
+				attribute.Key(TestStatus).String(string(test.Status)),
+				attribute.Key(TestSystemErr).String(test.SystemErr),
+				attribute.Key(TestSystemOut).String(test.SystemOut),
+			}
+
+			testAttributes = append(testAttributes, propsToLabels(test.Properties)...)
+			testAttributes = append(testAttributes, suiteAttributes...)
+
+			if test.Error != nil {
+				testAttributes = append(testAttributes, attribute.Key("tests.error").String(test.Error.Error()))
+			}
+
+			_, testSpan := tracer.Start(ctx, test.Name,
+				trace.WithAttributes(testAttributes...))
+			testSpan.End()
+		}
+
+		suiteSpan.End()
+	}
+
+	return nil
 }
 
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
@@ -55,6 +136,26 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*con
 	return pusher, nil
 }
 
+func initTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
+	traceExporter, err := otlptracegrpc.New(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
+	)
+	return tracerProvider, nil
+}
+
+func propsToLabels(props map[string]string) []attribute.KeyValue {
+	attributes := []attribute.KeyValue{}
+	for k, v := range props {
+		attributes = append(attributes, attribute.Key(k).String(v))
+	}
+
+	return attributes
+}
+
 func readFromPipe() ([]byte, error) {
 	stat, _ := os.Stdin.Stat()
 
@@ -77,6 +178,12 @@ func readFromPipe() ([]byte, error) {
 }
 
 func Main(ctx context.Context) error {
+	tracesProvides, err := initTracerProvider(ctx)
+	if err != nil {
+		return err
+	}
+	defer tracesProvides.Shutdown(ctx)
+
 	metricsExporter, err := initMetricsExporter(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to initialise metrics exporter: %v", err)
@@ -102,15 +209,6 @@ func Main(ctx context.Context) error {
 		}
 	}()
 
-	meter := global.Meter("jUnit")
-
-	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
-	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
-	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
-	passedCounter := createIntCounter(meter, PassedTestsCount, "Total number of passed tests")
-	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
-	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
-
 	xmlBuffer, err := readFromPipe()
 	if err != nil {
 		return fmt.Errorf("failed to read from pipe: %v", err)
@@ -121,29 +219,7 @@ func Main(ctx context.Context) error {
 		return fmt.Errorf("failed to ingest JUnit xml: %v", err)
 	}
 
-	for _, suite := range suites {
-		totals := suite.Totals
-
-		suiteName := attribute.KeyValue{
-			Key:   attribute.Key(TestsName),
-			Value: attribute.StringValue(suite.Name),
-		}
-		suitePackage := attribute.KeyValue{
-			Key:   attribute.Key(TestsPackage),
-			Value: attribute.StringValue(suite.Package),
-		}
-
-		labels := []attribute.KeyValue{suiteName, suitePackage}
-
-		durationCounter.Add(ctx, int64(totals.Duration.Milliseconds()), labels...)
-		errorCounter.Add(ctx, int64(totals.Error), labels...)
-		failedCounter.Add(ctx, int64(totals.Failed), labels...)
-		passedCounter.Add(ctx, int64(totals.Passed), labels...)
-		skippedCounter.Add(ctx, int64(totals.Skipped), labels...)
-		testsCounter.Add(ctx, int64(totals.Tests), labels...)
-	}
-
-	return nil
+	return createTracesAndSpans(ctx, tracesProvides, suites)
 }
 
 func main() {

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+	<testsuite tests="72" failures="0" time="0.050000" name="github.com/elastic/e2e-testing/internal" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Git_commits_in_version" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_RPM_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_RPM_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_DEB_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_DEB_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_TAR_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_TAR_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_from_Elastic&#39;s_repository_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_from_Elastic&#39;s_repository_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_UBI8_from_Elastic&#39;s_repository_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_UBI8_from_Elastic&#39;s_repository_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_from_local_repository_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_from_local_repository_(arm64)" time="0.020000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_UBI8_from_local_repository_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_UBI8_from_local_repository_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_from_GCP_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_from_GCP_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_UBI8_from_GCP_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_UBI8_from_GCP_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_for_a_Pull_Request_(amd64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName/For_Docker_for_a_Pull_Request_(arm64)" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestBuildArtifactName" time="0.030000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestCheckPRVersion/Checking_a_version_should_return_the_version" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestCheckPRVersion/A_Commit-based_version_should_return_base_version" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestCheckPRVersion" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_non-existent_binary_from_local_Beats_dir_throws_an_error" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_RPM_binary_(amd64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_RPM_binary_(arm64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_DEB_binary_(amd64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_DEB_binary_(arm64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_TAR_binary_(amd64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_TAR_binary_(x86_64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_TAR_binary_(arm64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_Docker_binary_(amd64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_Docker_binary_(arm64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_ubi8_Docker_binary_(amd64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath/Fetching_ubi8_Docker_binary_(arm64)_from_local_Beats_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestFetchBeatsBinaryFromLocalPath" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_NewElasticVersion/newElasticVersion_without_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_NewElasticVersion/newElasticVersion_with_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_NewElasticVersion" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetBucketSearchNextPageParam_HasMorePages" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetBucketSearchNextPageParam_HasNoMorePages" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Commits/Fetching_commits_bucket_for_RPM_package" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Commits/Fetching_commits_bucket_for_DEB_package" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Commits/Fetching_commits_bucket_for_TAR_package_adds_OS_to_fileName_and_object" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Commits/Fetching_commits_bucket_for_ubi8_Docker_image" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Commits" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Snapshots/Fetching_snapshots_bucket_for_RPM_package" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Snapshots/Fetching_snapshots_bucket_for_DEB_package" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Snapshots/Fetching_snapshots_bucket_for_TAR_package_adds_OS_to_fileName_and_object" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestGetGCPBucketCoordinates_Snapshots" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetCommitVersion/GetCommitVersion_without_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetCommitVersion/GetCommitVersion_with_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetCommitVersion" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetFullVersion/GetFullVersion_without_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetFullVersion/GetFullVersion_with_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetFullVersion" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetSnapshotVersion/GetSnapshotVersion_without_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetSnapshotVersion/GetCommitVersion_with_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetSnapshotVersion" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetVersion/GetVersion_without_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetVersion/GetVersion_with_git_commit" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="Test_GetVersion" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestProcessBucketSearchPage_CommitFound" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestProcessBucketSearchPage_CommitsNotFound" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestProcessBucketSearchPage_SnapshotsFound" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestProcessBucketSearchPage_SnapshotsNotFound" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestRemoveCommitFromSnapshot" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestSnapshotHasCommit/Returns_true_with_commits_in_snapshots" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestSnapshotHasCommit/Returns_false_with_commits_in_snapshots" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal" name="TestSnapshotHasCommit" time="0.000000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/action" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/common" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/curl" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="16" failures="0" time="7.750000" name="github.com/elastic/e2e-testing/internal/deploy" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_GetName/ServiceRequest_without_flavour" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_GetName/ServiceRequest_including_flavour" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_GetName" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_WithScale/ServiceRequest_without_scale" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_WithScale/ServiceRequest_including_zero_or_negative_scale" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_WithScale/ServiceRequest_including_scale" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_ServiceRequest_WithScale" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_CopyFile/Copy_file_succeded" time="0.190000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_CopyFile/Copy_file_raises_error_with_invalid_source_path" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_CopyFile/Copy_file_raises_error_with_invalid_target_parent_dir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_CopyFile/Copy_file_raises_error_with_invalid_target_subdir" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_CopyFile/Copy_tar_file" time="0.210000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="Test_CopyFile" time="7.350000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="TestGetDockerNamespaceEnvVar/Returns_fallback_when_environment_variable_is_not_set" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="TestGetDockerNamespaceEnvVar/Returns_Observability_CI_when_environment_variable_is_set" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/deploy" name="TestGetDockerNamespaceEnvVar" time="0.000000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/elasticsearch" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="5" failures="0" time="0.370000" name="github.com/elastic/e2e-testing/internal/git" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/git" name="TestBuild" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/git" name="TestBuildWithGitProtocol" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/git" name="TestBuildWithWrongRemote" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/git" name="TestBuildWithWellFormedRemote" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/git" name="TestClone" time="0.370000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/helm" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/installer" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="1" failures="0" time="0.010000" name="github.com/elastic/e2e-testing/internal/io" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/io" name="TestMkdirAll" time="0.010000"></testcase>
+	</testsuite>
+	<testsuite tests="2" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/kibana" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/kibana" name="TestGetBaseURL" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/kibana" name="TestNewClient" time="0.000000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/kubectl" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/kubernetes" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="6" failures="0" time="0.020000" name="github.com/elastic/e2e-testing/internal/shell" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/shell" name="TestGetEnv/Empty_value_should_return_fallback" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/shell" name="TestGetEnv/Non_existing_key_should_return_fallback" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/shell" name="TestGetEnv/Value_should_return_value" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/shell" name="TestGetEnv" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/shell" name="TestGetEnvBool" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/shell" name="TestExecuteWithStdin_doesNotLoseEnv" time="0.020000"></testcase>
+	</testsuite>
+	<testsuite tests="3" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/state" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/state" name="TestDestroy" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/state" name="TestRecover" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/state" name="TestUpdateCreatesStateFile" time="0.000000"></testcase>
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/internal/systemd" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="9" failures="0" time="0.130000" name="github.com/elastic/e2e-testing/internal/utils" timestamp="2021-11-15T05:16:31Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestDownloadFile" time="0.130000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestGetArchitecture/Retrieving_amd_architecture" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestGetArchitecture/Retrieving_amd_architecture_as_fallback" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestGetArchitecture/Retrieving_arm_architecture" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestGetArchitecture" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestIsCommit/Returns_true_with_commits" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestIsCommit/Returns_false_with_non-commits" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestIsCommit/Returns_false_with_commits_in_snapshots" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/internal/utils" name="TestIsCommit" time="0.000000"></testcase>
+	</testsuite>
+</testsuites>

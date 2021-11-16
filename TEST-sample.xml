@@ -1,18 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-	<testsuite name="JUnitXmlReporter" errors="0" tests="0" failures="0" time="0" timestamp="2013-05-24T10:23:58" />
-	<testsuite name="JUnitXmlReporter.constructor" errors="0" skipped="1" tests="3" failures="1" time="0.006" timestamp="2013-05-24T10:23:58">
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/cli" timestamp="2021-11-15T05:16:16Z">
 		<properties>
-			<property name="java.vendor" value="Sun Microsystems Inc." />
-			<property name="compiler.debug" value="on" />
-			<property name="project.jdk.classpath" value="jdk.classpath.1.6" />
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
 		</properties>
-		<testcase classname="JUnitXmlReporter.constructor" name="should default path to an empty string" time="0.006">
-			<failure message="test failure">Assertion failed</failure>
-		</testcase>
-		<testcase classname="JUnitXmlReporter.constructor" name="should default consolidate to true" time="0">
-			<skipped />
-		</testcase>
-		<testcase classname="JUnitXmlReporter.constructor" name="should default useDotNotation to true" time="0" />
+	</testsuite>
+	<testsuite tests="0" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/cli/cmd" timestamp="2021-11-15T05:16:16Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+	</testsuite>
+	<testsuite tests="11" failures="0" time="0.000000" name="github.com/elastic/e2e-testing/cli/config" timestamp="2021-11-15T05:16:16Z">
+		<properties>
+			<property name="go.version" value="go1.16.3 linux/amd64"></property>
+		</properties>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestCheckConfigDirsCreatesWorkspaceAtHome" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithTimestamps" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithDebugLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithErrorLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithFatalLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithInfoLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithPanicLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithTraceLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithWarningLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestConfigureLoggerWithWrongLogLevel" time="0.000000"></testcase>
+		<testcase classname="github.com/elastic/e2e-testing/cli/config" name="TestNewConfigPopulatesConfiguration" time="0.000000"></testcase>
 	</testsuite>
 </testsuites>
