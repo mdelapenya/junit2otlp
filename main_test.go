@@ -45,7 +45,6 @@ func Test_GetServiceName(t *testing.T) {
 			srvName := getOtlpServiceName()
 
 			assert.Equal(t, "this-is-a-flag", srvName)
-			assert.Equal(t, "this-is-a-flag", os.Getenv("OTEL_SERVICE_NAME"))
 		})
 
 		t.Run("With environment variable retrieves the variable", func(t *testing.T) {
