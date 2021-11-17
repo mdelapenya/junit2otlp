@@ -1,6 +1,8 @@
 package main
 
 const (
+	Junit2otlp = "junit2otlp"
+
 	// suite keys
 	FailedTestsCount  = "tests.failed"
 	ErrorTestsCount   = "tests.error"

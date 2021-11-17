@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -20,14 +21,19 @@ import (
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
+var serviceNameFlag string
+
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
+	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
+
 	// initialise runtime keys
 	runtimeAttributes = []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
@@ -43,9 +49,9 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 		)
 }
 
-func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
-	tracer := tracesProvides.Tracer("junit2otlp")
-	meter := global.Meter("junit2otlp")
+func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
+	tracer := tracesProvides.Tracer(srvName)
+	meter := global.Meter(srvName)
 
 	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
 	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
@@ -54,7 +60,7 @@ func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerPr
 	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
 	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
 
-	ctx, outerSpan := tracer.Start(ctx, "junit2otlp", trace.WithAttributes(runtimeAttributes...))
+	ctx, outerSpan := tracer.Start(ctx, srvName, trace.WithAttributes(runtimeAttributes...))
 	defer outerSpan.End()
 
 	for _, suite := range suites {
@@ -109,6 +115,16 @@ func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerPr
 	return nil
 }
 
+// getOtlpServiceName
+func getOtlpServiceName() string {
+	envVar := os.Getenv("OTEL_SERVICE_NAME")
+	if envVar != "" {
+		return envVar
+	}
+
+	return serviceNameFlag
+}
+
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
@@ -136,12 +152,23 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*con
 	return pusher, nil
 }
 
-func initTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
+func initTracerProvider(ctx context.Context, srvName string) (*sdktrace.TracerProvider, error) {
 	traceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return nil, err
 	}
+
+	// set the service name that will show up in tracing UIs
+	resAttrs := resource.WithAttributes(
+		semconv.ServiceNameKey.String(srvName),
+	)
+	res, err := resource.New(ctx, resAttrs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OpenTelemetry service name resource: %s", err)
+	}
+
 	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
 	)
 	return tracerProvider, nil
@@ -177,8 +204,8 @@ func readFromPipe() ([]byte, error) {
 	return nil, fmt.Errorf("there is no data in the pipe")
 }
 
-func Main(ctx context.Context) error {
-	tracesProvides, err := initTracerProvider(ctx)
+func Main(ctx context.Context, srvName string) error {
+	tracesProvides, err := initTracerProvider(ctx, srvName)
 	if err != nil {
 		return err
 	}
@@ -219,11 +246,15 @@ func Main(ctx context.Context) error {
 		return fmt.Errorf("failed to ingest JUnit xml: %v", err)
 	}
 
-	return createTracesAndSpans(ctx, tracesProvides, suites)
+	return createTracesAndSpans(ctx, srvName, tracesProvides, suites)
 }
 
 func main() {
-	if err := Main(context.Background()); err != nil {
+	flag.Parse()
+
+	otlpSrvName := getOtlpServiceName()
+
+	if err := Main(context.Background(), otlpSrvName); err != nil {
 		log.Fatal(err)
 	}
 }
