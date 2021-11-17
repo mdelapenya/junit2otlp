@@ -134,7 +134,7 @@ func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	return exp, nil
 }
 
-func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*controller.Controller, error) {
+func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter, res *resource.Resource) (*controller.Controller, error) {
 	pusher := controller.New(
 		processor.NewFactory(
 			simple.NewWithExactDistribution(),
@@ -142,6 +142,7 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*con
 		),
 		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(2*time.Second),
+		controller.WithResource(res),
 	)
 	global.SetMeterProvider(pusher)
 
@@ -152,19 +153,10 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*con
 	return pusher, nil
 }
 
-func initTracerProvider(ctx context.Context, srvName string) (*sdktrace.TracerProvider, error) {
+func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.TracerProvider, error) {
 	traceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	// set the service name that will show up in tracing UIs
-	resAttrs := resource.WithAttributes(
-		semconv.ServiceNameKey.String(srvName),
-	)
-	res, err := resource.New(ctx, resAttrs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenTelemetry service name resource: %s", err)
 	}
 
 	tracerProvider := sdktrace.NewTracerProvider(
@@ -204,8 +196,19 @@ func readFromPipe() ([]byte, error) {
 	return nil, fmt.Errorf("there is no data in the pipe")
 }
 
-func Main(ctx context.Context, srvName string) error {
-	tracesProvides, err := initTracerProvider(ctx, srvName)
+func Main(ctx context.Context) error {
+	otlpSrvName := getOtlpServiceName()
+
+	// set the service name that will show up in tracing UIs
+	resAttrs := resource.WithAttributes(
+		semconv.ServiceNameKey.String(otlpSrvName),
+	)
+	res, err := resource.New(ctx, resAttrs)
+	if err != nil {
+		return fmt.Errorf("failed to create OpenTelemetry service name resource: %s", err)
+	}
+
+	tracesProvides, err := initTracerProvider(ctx, res)
 	if err != nil {
 		return err
 	}
@@ -223,7 +226,7 @@ func Main(ctx context.Context, srvName string) error {
 		}
 	}()
 
-	pusher, err := initMetricsPusher(ctx, metricsExporter)
+	pusher, err := initMetricsPusher(ctx, metricsExporter, res)
 	if err != nil {
 		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
@@ -246,15 +249,13 @@ func Main(ctx context.Context, srvName string) error {
 		return fmt.Errorf("failed to ingest JUnit xml: %v", err)
 	}
 
-	return createTracesAndSpans(ctx, srvName, tracesProvides, suites)
+	return createTracesAndSpans(ctx, otlpSrvName, tracesProvides, suites)
 }
 
 func main() {
 	flag.Parse()
 
-	otlpSrvName := getOtlpServiceName()
-
-	if err := Main(context.Background(), otlpSrvName); err != nil {
+	if err := Main(context.Background()); err != nil {
 		log.Fatal(err)
 	}
 }
