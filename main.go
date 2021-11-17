@@ -28,11 +28,13 @@ import (
 )
 
 var serviceNameFlag string
+var serviceVersionFlag string
 
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
 	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 
 	// initialise runtime keys
 	runtimeAttributes = []attribute.KeyValue{
@@ -115,14 +117,24 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	return nil
 }
 
-// getOtlpServiceName
-func getOtlpServiceName() string {
-	envVar := os.Getenv("OTEL_SERVICE_NAME")
+// getOtlpEnvVar checks if the env variable, removing the OTEL prefix, needs to override
+func getOtlpEnvVar(key string, fallback string) string {
+	envVar := os.Getenv("OTEL_" + key)
 	if envVar != "" {
 		return envVar
 	}
 
-	return serviceNameFlag
+	return fallback
+}
+
+// getOtlpServiceName checks the service name
+func getOtlpServiceName() string {
+	return getOtlpEnvVar("SERVICE_NAME", serviceNameFlag)
+}
+
+// getOtlpServiceVersion checks the service version
+func getOtlpServiceVersion() string {
+	return getOtlpEnvVar("SERVICE_VERSION", serviceVersionFlag)
 }
 
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
@@ -198,10 +210,12 @@ func readFromPipe() ([]byte, error) {
 
 func Main(ctx context.Context) error {
 	otlpSrvName := getOtlpServiceName()
+	otlpSrvVersion := getOtlpServiceVersion()
 
 	// set the service name that will show up in tracing UIs
 	resAttrs := resource.WithAttributes(
 		semconv.ServiceNameKey.String(otlpSrvName),
+		semconv.ServiceVersionKey.String(otlpSrvVersion),
 	)
 	res, err := resource.New(ctx, resAttrs)
 	if err != nil {
