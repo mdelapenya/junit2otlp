@@ -12,6 +12,8 @@ jobs:
   build:
     name: Unit tests
     runs-on: ubuntu-latest
+    env:
+        GO111MODULE: "on"
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v2
