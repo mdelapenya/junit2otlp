@@ -29,12 +29,14 @@ import (
 
 var serviceNameFlag string
 var serviceVersionFlag string
+var traceNameFlag string
 
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
 	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
 
 	// initialise runtime keys
 	runtimeAttributes = []attribute.KeyValue{
@@ -62,7 +64,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
 	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
 
-	ctx, outerSpan := tracer.Start(ctx, srvName, trace.WithAttributes(runtimeAttributes...))
+	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...))
 	defer outerSpan.End()
 
 	for _, suite := range suites {
