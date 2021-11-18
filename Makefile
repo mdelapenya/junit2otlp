@@ -10,7 +10,6 @@ define start_demo
 	mkdir demos/$(1)/build
 	touch demos/$(1)/build/tests.json
 	docker-compose -f demos/$(1)/docker-compose.yml up -d
-	echo '>> waiting for services...'
 	env | grep OTEL
 endef
 
@@ -21,14 +20,14 @@ endef
 
 demo-start-elastic:
 	$(call setup_demo_env,elastic)
-	$(call start_demo,elastic,5)
+	$(call start_demo,elastic)
 
 demo-stop-elastic:
 	$(call stop_demo,elastic)
 
 demo-start-jaeger:
 	$(call setup_demo_env,jaeger)
-	$(call start_demo,jaeger,5)
+	$(call start_demo,jaeger)
 
 demo-stop-jaeger:
 	$(call stop_demo,jaeger)
