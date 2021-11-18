@@ -31,3 +31,10 @@ demo-start-jaeger:
 
 demo-stop-jaeger:
 	$(call stop_demo,jaeger)
+
+demo-start-prometheus:
+	$(call setup_demo_env,prometheus)
+	$(call start_demo,prometheus)
+
+demo-stop-prometheus:
+	$(call stop_demo,prometheus)

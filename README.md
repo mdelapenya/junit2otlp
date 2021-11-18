@@ -33,3 +33,14 @@ cat TEST-sample2.xml | go run main.go semconv.go
 cat TEST-sample3.xml | go run main.go semconv.go
 open http://localhost:16686
 ```
+
+### Prometheus
+It will use Prometheus as back-end, sending the traces, spans and metrics through the OpenTelemetry collector, storing them in memory.
+
+```shell
+make demo-start-prometheus
+cat TEST-sample.xml | go run main.go semconv.go
+cat TEST-sample2.xml | go run main.go semconv.go
+cat TEST-sample3.xml | go run main.go semconv.go
+open http://localhost:9090
+```
