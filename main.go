@@ -189,7 +189,13 @@ func propsToLabels(props map[string]string) []attribute.KeyValue {
 	return attributes
 }
 
-func readFromPipe() ([]byte, error) {
+type InputReader interface {
+	Read() ([]byte, error)
+}
+
+type PipeReader struct{}
+
+func (pr *PipeReader) Read() ([]byte, error) {
 	stat, _ := os.Stdin.Stat()
 
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
@@ -210,7 +216,7 @@ func readFromPipe() ([]byte, error) {
 	return nil, fmt.Errorf("there is no data in the pipe")
 }
 
-func Main(ctx context.Context) error {
+func Main(ctx context.Context, reader InputReader) error {
 	otlpSrvName := getOtlpServiceName()
 	otlpSrvVersion := getOtlpServiceVersion()
 
@@ -255,7 +261,7 @@ func Main(ctx context.Context) error {
 		}
 	}()
 
-	xmlBuffer, err := readFromPipe()
+	xmlBuffer, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read from pipe: %v", err)
 	}
@@ -271,7 +277,7 @@ func Main(ctx context.Context) error {
 func main() {
 	flag.Parse()
 
-	if err := Main(context.Background()); err != nil {
+	if err := Main(context.Background(), &PipeReader{}); err != nil {
 		log.Fatal(err)
 	}
 }
