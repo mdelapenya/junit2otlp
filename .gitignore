@@ -1,4 +1,5 @@
 .env
 junit2otlp
 
+demos/**/build
 dist/
