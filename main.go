@@ -119,7 +119,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 
 // getOtlpEnvVar checks if the env variable, removing the OTEL prefix, needs to override
 func getOtlpEnvVar(key string, fallback string) string {
-	envVar := os.Getenv("OTEL_" + key)
+	envVar := os.Getenv(key)
 	if envVar != "" {
 		return envVar
 	}
@@ -129,12 +129,12 @@ func getOtlpEnvVar(key string, fallback string) string {
 
 // getOtlpServiceName checks the service name
 func getOtlpServiceName() string {
-	return getOtlpEnvVar("SERVICE_NAME", serviceNameFlag)
+	return getOtlpEnvVar("OTEL_SERVICE_NAME", serviceNameFlag)
 }
 
 // getOtlpServiceVersion checks the service version
 func getOtlpServiceVersion() string {
-	return getOtlpEnvVar("SERVICE_VERSION", serviceVersionFlag)
+	return getOtlpEnvVar("OTEL_SERVICE_VERSION", serviceVersionFlag)
 }
 
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
