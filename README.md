@@ -7,15 +7,15 @@ This simple CLI, written in Go, is sending jUnit metrics to a back-end using [Op
 ## Background
 As jUnit represents a de-facto standard for test results in every programming language, this tool consumes the XML files produced by the test runner (or a tool converting to xUnit format), sending metrics to one or more open-source or commercial back-ends with Open Telemetry.
 
-## How to use it
+## Demos
+To demonstrate how traces and metrics are sent to different back-ends, we are provising the following demos:
+
+- Elastic
+
+### Elastic
+It will use the Elastic Stack as back-end, sending the traces, spans and metrics through the APM Server, storing them in Elasticsearch and finally using Kibana as visualisation layer.
 
 ```shell
-# Run back-end for storing traces and spans (using Elastic Stack for this purpose)
-docker-compose up -d
-# Set the environment with the OTLP endpoint
-eval $(cat test.env)
-# Use the sample XML file and pass it to the binary
-cat TEST-sample.xml | go run *.go
-cat TEST-sample2.xml | go run *.go
-cat TEST-sample3.xml | go run *.go
+make demo-start-elastic
+open http://localhost:5601/app/apm/services?rangeFrom=now-15m&rangeTo=now&comparisonEnabled=true&comparisonType=day
 ```
