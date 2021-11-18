@@ -29,3 +29,10 @@ demo-start-elastic:
 
 demo-stop-elastic:
 	$(call stop_demo,elastic)
+
+demo-start-jaeger:
+	$(call setup_demo_env,jaeger)
+	$(call start_demo,jaeger,5)
+
+demo-stop-jaeger:
+	$(call stop_demo,jaeger)

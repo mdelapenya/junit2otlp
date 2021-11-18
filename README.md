@@ -19,3 +19,11 @@ It will use the Elastic Stack as back-end, sending the traces, spans and metrics
 make demo-start-elastic
 open http://localhost:5601/app/apm/services?rangeFrom=now-15m&rangeTo=now&comparisonEnabled=true&comparisonType=day
 ```
+
+### Jaeger
+It will use Jaeger as back-end, sending the traces, spans and metrics through the OpenTelemetry collector, storing them in memory.
+
+```shell
+make demo-start-jaeger
+open http://localhost:16686
+```
