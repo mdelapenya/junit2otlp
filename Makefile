@@ -38,3 +38,10 @@ demo-start-prometheus:
 
 demo-stop-prometheus:
 	$(call stop_demo,prometheus)
+
+demo-start-zipkin:
+	$(call setup_demo_env,zipkin)
+	$(call start_demo,zipkin)
+
+demo-stop-zipkin:
+	$(call stop_demo,zipkin)

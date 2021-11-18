@@ -1,0 +1,32 @@
+version: '3.7'
+services:
+  zipkin-all-in-one:
+    image: openzipkin/zipkin:latest
+    ports:
+      - "9411:9411"
+    networks:
+      - junit2otlp
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib-dev:93a9885459c9406db8ac446f77f290b02542e8d5
+    command: ["--config=/etc/otel-collector-config.yaml", "${OTELCOL_ARGS}"]
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - ./build/tests.json:/tmp/tests.json
+    ports:
+      - "1888:1888"   # pprof extension
+      - "13133:13133" # health_check extension
+      - "14317:4317"  # OTLP gRPC receiver
+      - "55670:55679" # zpages extension
+    depends_on:
+      - zipkin-all-in-one
+    networks:
+      - junit2otlp
+
+volumes:
+  esdata:
+    driver: local
+
+networks:
+  junit2otlp:
+    driver: bridge

@@ -11,6 +11,9 @@ As jUnit represents a de-facto standard for test results in every programming la
 To demonstrate how traces and metrics are sent to different back-ends, we are provising the following demos:
 
 - Elastic
+- Jaeger
+- Prometheus
+- Zipkin
 
 ### Elastic
 It will use the Elastic Stack as back-end, sending the traces, spans and metrics through the APM Server, storing them in Elasticsearch and finally using Kibana as visualisation layer.
@@ -43,4 +46,15 @@ cat TEST-sample.xml | go run main.go semconv.go
 cat TEST-sample2.xml | go run main.go semconv.go
 cat TEST-sample3.xml | go run main.go semconv.go
 open http://localhost:9090
+```
+
+### Zipkin
+It will use Prometheus as back-end, sending the traces, spans and metrics through the OpenTelemetry collector, storing them in memory.
+
+```shell
+make demo-start-zipkin
+cat TEST-sample.xml | go run main.go semconv.go
+cat TEST-sample2.xml | go run main.go semconv.go
+cat TEST-sample3.xml | go run main.go semconv.go
+open http://localhost:9411
 ```
