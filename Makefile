@@ -12,10 +12,6 @@ define start_demo
 	docker-compose -f demos/$(1)/docker-compose.yml up -d
 	echo '>> waiting for services...'
 	env | grep OTEL
-	sleep $(2)
-	cat TEST-sample.xml | go run main.go semconv.go --service-name $(1) --service-version 1.0.0
-	cat TEST-sample2.xml | go run main.go semconv.go --service-name $(1) --service-version 1.0.0
-	cat TEST-sample3.xml | go run main.go semconv.go --service-name $(1) --service-version 1.0.0
 endef
 
 define stop_demo

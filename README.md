@@ -17,6 +17,9 @@ It will use the Elastic Stack as back-end, sending the traces, spans and metrics
 
 ```shell
 make demo-start-elastic
+cat TEST-sample.xml | go run main.go semconv.go
+cat TEST-sample2.xml | go run main.go semconv.go
+cat TEST-sample3.xml | go run main.go semconv.go
 open http://localhost:5601/app/apm/services?rangeFrom=now-15m&rangeTo=now&comparisonEnabled=true&comparisonType=day
 ```
 
@@ -25,5 +28,8 @@ It will use Jaeger as back-end, sending the traces, spans and metrics through th
 
 ```shell
 make demo-start-jaeger
+cat TEST-sample.xml | go run main.go semconv.go
+cat TEST-sample2.xml | go run main.go semconv.go
+cat TEST-sample3.xml | go run main.go semconv.go
 open http://localhost:16686
 ```
