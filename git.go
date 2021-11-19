@@ -3,7 +3,7 @@ package main
 import (
 	git "github.com/go-git/go-git/v5"
 	"go.opentelemetry.io/otel/attribute"
-) // with go modules enabled (GO111MODULE=on or outside GOPATH)
+)
 
 type GitScm struct {
 	repositoryPath string
