@@ -47,6 +47,12 @@ func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerPr
 	tracer := tracesProvides.Tracer("junit2otlp")
 	meter := global.Meter("junit2otlp")
 
+	scm := GetScm()
+	if scm != nil {
+		scmAttributes := scm.contributeOtelAttributes()
+		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
+	}
+
 	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
 	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
 	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")

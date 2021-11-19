@@ -1,6 +1,11 @@
 package main
 
 const (
+	// scm keys
+	ScmBranch     = "scm.branch"
+	ScmRepository = "scm.repository"
+	ScmType       = "scm.type"
+
 	// suite keys
 	FailedTestsCount  = "tests.failed"
 	ErrorTestsCount   = "tests.error"
