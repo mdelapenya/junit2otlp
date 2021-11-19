@@ -96,6 +96,11 @@ func Test_Main(t *testing.T) {
 		t.Error()
 	}
 
+	err = os.Mkdir(path.Join(workingDir, "build"), 0755)
+	if err != nil {
+		t.Error(err)
+	}
+
 	reportFilePath := path.Join(workingDir, "build", "otel-collector.json")
 	reportFile, err := os.Create(reportFilePath)
 	if err != nil {
