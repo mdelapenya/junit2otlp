@@ -27,7 +27,8 @@ func TestGit(t *testing.T) {
 		return keyExistsWithValue(t, atts, ScmType, "git")
 	}, "Git is not set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
-		return keyExistsWithValue(t, atts, ScmRepository, "git@github.com:mdelapenya/junit2otlp.git")
+		// check that any of the git or https protocols are set as scm.repository
+		return keyExistsWithValue(t, atts, ScmRepository, "git@github.com:mdelapenya/junit2otlp.git", "https://github.com:mdelapenya/junit2otlp")
 	}, "Remote is not set as scm.repository. Attributes: %v", atts)
 }
 
@@ -41,10 +42,14 @@ func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
 	return false
 }
 
-func keyExistsWithValue(t *testing.T, attributes []attribute.KeyValue, key string, value string) bool {
+func keyExistsWithValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...string) bool {
 	for _, att := range attributes {
-		if string(att.Key) == key && att.Value.AsString() == value {
-			return true
+		if string(att.Key) == key {
+			for _, v := range value {
+				if att.Value.AsString() == v {
+					return true
+				}
+			}
 		}
 	}
 
