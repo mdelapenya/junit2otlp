@@ -2,4 +2,5 @@
 junit2otlp
 
 build/
+demos/**/build
 dist/

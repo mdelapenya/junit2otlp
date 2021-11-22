@@ -17,15 +17,58 @@ This tool is able to override the following attributes:
 
 For further reference on environment variables in the OpenTelemetry SDK, please read the [official specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/)
 
-## How to use it
+## Demos
+To demonstrate how traces and metrics are sent to different back-ends, we are provising the following demos:
+
+- Elastic
+- Jaeger
+- Prometheus
+- Zipkin
+
+### Elastic
+It will use the Elastic Stack as back-end, sending the traces, spans and metrics through the APM Server, storing them in Elasticsearch and finally using Kibana as visualisation layer.
 
 ```shell
-# Run back-end for storing traces and spans (using Elastic Stack for this purpose)
-docker-compose up -d
-# Set the environment with the OTLP endpoint
-eval $(cat test.env)
-# Use the sample XML file and pass it to the binary
-cat TEST-sample.xml | go run main.go semconv.go
-cat TEST-sample2.xml | go run main.go semconv.go
-cat TEST-sample3.xml | go run main.go semconv.go
+make demo-start-elastic
+go build && chmod +x ./junit2otlp
+cat TEST-sample.xml | ./junit2otlp
+cat TEST-sample2.xml | ./junit2otlp
+cat TEST-sample3.xml | ./junit2otlp
+open http://localhost:5601/app/apm/services?rangeFrom=now-15m&rangeTo=now&comparisonEnabled=true&comparisonType=day
+```
+
+### Jaeger
+It will use Jaeger as back-end, sending the traces, spans and metrics through the OpenTelemetry collector, storing them in memory.
+
+```shell
+make demo-start-jaeger
+go build && chmod +x ./junit2otlp
+cat TEST-sample.xml | ./junit2otlp
+cat TEST-sample2.xml | ./junit2otlp
+cat TEST-sample3.xml | ./junit2otlp
+open http://localhost:16686
+```
+
+### Prometheus
+It will use Prometheus as back-end, sending the traces, spans and metrics through the OpenTelemetry collector, storing them in memory.
+
+```shell
+make demo-start-prometheus
+go build && chmod +x ./junit2otlp
+cat TEST-sample.xml | ./junit2otlp
+cat TEST-sample2.xml | ./junit2otlp
+cat TEST-sample3.xml | ./junit2otlp
+open http://localhost:9090
+```
+
+### Zipkin
+It will use Prometheus as back-end, sending the traces, spans and metrics through the OpenTelemetry collector, storing them in memory.
+
+```shell
+make demo-start-zipkin
+go build && chmod +x ./junit2otlp
+cat TEST-sample.xml | ./junit2otlp
+cat TEST-sample2.xml | ./junit2otlp
+cat TEST-sample3.xml | ./junit2otlp
+open http://localhost:9411
 ```
