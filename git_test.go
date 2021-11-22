@@ -28,7 +28,7 @@ func TestGit(t *testing.T) {
 	}, "Git is not set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		// check that any of the git or https protocols are set as scm.repository
-		return keyExistsWithValue(t, atts, ScmRepository, "git@github.com:mdelapenya/junit2otlp.git", "https://github.com:mdelapenya/junit2otlp")
+		return keyExistsWithValue(t, atts, ScmRepository, "git@github.com:mdelapenya/junit2otlp.git", "https://github.com/mdelapenya/junit2otlp")
 	}, "Remote is not set as scm.repository. Attributes: %v", atts)
 }
 
