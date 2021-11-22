@@ -57,6 +57,12 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	tracer := tracesProvides.Tracer(srvName)
 	meter := global.Meter(srvName)
 
+	scm := GetScm()
+	if scm != nil {
+		scmAttributes := scm.contributeOtelAttributes()
+		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
+	}
+
 	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
 	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
 	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
