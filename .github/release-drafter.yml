@@ -12,6 +12,10 @@ categories:
       - 'fix'
       - 'bugfix'
       - 'bug'
+  - title: '📖 Documentation'
+    labels:
+      - 'docs'
+      - 'documentation'
   - title: '🧰 Maintenance'
     label: 'chore'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
