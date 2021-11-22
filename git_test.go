@@ -22,13 +22,13 @@ func TestGit(t *testing.T) {
 
 	assert.Equal(t, 3, len(atts))
 
-	assert.Condition(t, func() bool { return keyExists(t, atts, ScmBranch) }, "Branch is not set as scm.branch")
+	assert.Condition(t, func() bool { return keyExists(t, atts, ScmBranch) }, "Branch is not set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmType, "git")
-	}, "Git is not set as scm.type")
+	}, "Git is not set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmRepository, "git@github.com:mdelapenya/junit2otlp.git")
-	}, "Remote is not set as scm.repository")
+	}, "Remote is not set as scm.repository. Attributes: %v", atts)
 }
 
 func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
