@@ -1,6 +1,8 @@
 package main
 
 const (
+	Junit2otlp = "junit2otlp"
+
 	// scm keys
 	ScmBranch     = "scm.branch"
 	ScmRepository = "scm.repository"
