@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -20,14 +21,23 @@ import (
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
+var serviceNameFlag string
+var serviceVersionFlag string
+var traceNameFlag string
+
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
+	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
+
 	// initialise runtime keys
 	runtimeAttributes = []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
@@ -43,9 +53,15 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 		)
 }
 
-func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
-	tracer := tracesProvides.Tracer("junit2otlp")
-	meter := global.Meter("junit2otlp")
+func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
+	tracer := tracesProvides.Tracer(srvName)
+	meter := global.Meter(srvName)
+
+	scm := GetScm()
+	if scm != nil {
+		scmAttributes := scm.contributeOtelAttributes()
+		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
+	}
 
 	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
 	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
@@ -54,7 +70,7 @@ func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerPr
 	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
 	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
 
-	ctx, outerSpan := tracer.Start(ctx, "junit2otlp", trace.WithAttributes(runtimeAttributes...))
+	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...))
 	defer outerSpan.End()
 
 	for _, suite := range suites {
@@ -109,6 +125,26 @@ func createTracesAndSpans(ctx context.Context, tracesProvides *sdktrace.TracerPr
 	return nil
 }
 
+// getOtlpEnvVar checks if the env variable, removing the OTEL prefix, needs to override
+func getOtlpEnvVar(key string, fallback string) string {
+	envVar := os.Getenv(key)
+	if envVar != "" {
+		return envVar
+	}
+
+	return fallback
+}
+
+// getOtlpServiceName checks the service name
+func getOtlpServiceName() string {
+	return getOtlpEnvVar("OTEL_SERVICE_NAME", serviceNameFlag)
+}
+
+// getOtlpServiceVersion checks the service version
+func getOtlpServiceVersion() string {
+	return getOtlpEnvVar("OTEL_SERVICE_VERSION", serviceVersionFlag)
+}
+
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
@@ -118,7 +154,7 @@ func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	return exp, nil
 }
 
-func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*controller.Controller, error) {
+func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter, res *resource.Resource) (*controller.Controller, error) {
 	pusher := controller.New(
 		processor.NewFactory(
 			simple.NewWithExactDistribution(),
@@ -126,6 +162,7 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*con
 		),
 		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(2*time.Second),
+		controller.WithResource(res),
 	)
 	global.SetMeterProvider(pusher)
 
@@ -136,12 +173,14 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter) (*con
 	return pusher, nil
 }
 
-func initTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
+func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.TracerProvider, error) {
 	traceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
 	)
 	return tracerProvider, nil
@@ -156,7 +195,13 @@ func propsToLabels(props map[string]string) []attribute.KeyValue {
 	return attributes
 }
 
-func readFromPipe() ([]byte, error) {
+type InputReader interface {
+	Read() ([]byte, error)
+}
+
+type PipeReader struct{}
+
+func (pr *PipeReader) Read() ([]byte, error) {
 	stat, _ := os.Stdin.Stat()
 
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
@@ -177,8 +222,21 @@ func readFromPipe() ([]byte, error) {
 	return nil, fmt.Errorf("there is no data in the pipe")
 }
 
-func Main(ctx context.Context) error {
-	tracesProvides, err := initTracerProvider(ctx)
+func Main(ctx context.Context, reader InputReader) error {
+	otlpSrvName := getOtlpServiceName()
+	otlpSrvVersion := getOtlpServiceVersion()
+
+	// set the service name that will show up in tracing UIs
+	resAttrs := resource.WithAttributes(
+		semconv.ServiceNameKey.String(otlpSrvName),
+		semconv.ServiceVersionKey.String(otlpSrvVersion),
+	)
+	res, err := resource.New(ctx, resAttrs)
+	if err != nil {
+		return fmt.Errorf("failed to create OpenTelemetry service name resource: %s", err)
+	}
+
+	tracesProvides, err := initTracerProvider(ctx, res)
 	if err != nil {
 		return err
 	}
@@ -196,7 +254,7 @@ func Main(ctx context.Context) error {
 		}
 	}()
 
-	pusher, err := initMetricsPusher(ctx, metricsExporter)
+	pusher, err := initMetricsPusher(ctx, metricsExporter, res)
 	if err != nil {
 		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
@@ -209,7 +267,7 @@ func Main(ctx context.Context) error {
 		}
 	}()
 
-	xmlBuffer, err := readFromPipe()
+	xmlBuffer, err := reader.Read()
 	if err != nil {
 		return fmt.Errorf("failed to read from pipe: %v", err)
 	}
@@ -219,11 +277,13 @@ func Main(ctx context.Context) error {
 		return fmt.Errorf("failed to ingest JUnit xml: %v", err)
 	}
 
-	return createTracesAndSpans(ctx, tracesProvides, suites)
+	return createTracesAndSpans(ctx, otlpSrvName, tracesProvides, suites)
 }
 
 func main() {
-	if err := Main(context.Background()); err != nil {
+	flag.Parse()
+
+	if err := Main(context.Background(), &PipeReader{}); err != nil {
 		log.Fatal(err)
 	}
 }
