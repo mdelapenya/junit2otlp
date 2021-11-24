@@ -14,6 +14,7 @@ This tool is able to override the following attributes:
 | --------- | ---- | ------------- | ----------- |
 | Service Name | --service-name | `junit2otlp` | Overrides OpenTelemetry's service name. If the `OTEL_SERVICE_NAME` environment variable is set, it will take precedence over any other value. |
 | Service Version | --service-version | Empty | Overrides OpenTelemetry's service version. If the `OTEL_SERVICE_VERSION` environment variable is set, it will take precedence over any other value. |
+| Trace Name | --trace-name | `junit2otlp` | Overrides OpenTelemetry's trace name. |
 
 For further reference on environment variables in the OpenTelemetry SDK, please read the [official specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/)
 
