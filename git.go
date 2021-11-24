@@ -26,7 +26,7 @@ func (scm *GitScm) contributeOtelAttributes() []attribute.KeyValue {
 	if err != nil {
 		return gitAttributes
 	}
-	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).String(origin.Config().URLs[0]))
+	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(origin.Config().URLs))
 
 	branch, err := repository.Head()
 	if err != nil {

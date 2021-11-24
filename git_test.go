@@ -46,8 +46,15 @@ func keyExistsWithValue(t *testing.T, attributes []attribute.KeyValue, key strin
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {
-				if att.Value.AsString() == v {
-					return true
+				val := att.Value.AsStringSlice()
+				if len(val) == 0 {
+					return v == att.Value.AsString()
+				}
+
+				for _, vv := range val {
+					if vv == v {
+						return true
+					}
 				}
 			}
 		}
