@@ -18,6 +18,28 @@ This tool is able to override the following attributes:
 
 For further reference on environment variables in the OpenTelemetry SDK, please read the [official specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/)
 
+## Docker image
+It's possible to run the binary as a Docker image. To build and use the image
+
+1. First build the Docker image using this Make goal:
+```shell
+make buildDockerImage
+```
+
+2. Then start the Elastic Stack back-end:
+```shell
+make demo-start-elastic
+```
+
+3. Finally, once the services are started, run:
+```
+cat TEST-sample3.xml | docker run --rm -i --network elastic_junit2otlp --env OTEL_EXPORTER_OTLP_ENDPOINT=http://apm-server:8200 mdelapenya/junit2otlp:latest --service-name DOCKERFOO --trace-name TRACEBAR
+```
+  - We are making the Docker container receive the pipe with the `-i` flag.
+  - We are attaching the container to the same Docker network where the services are running.
+  - We are passing an environment variable with the URL of the OpenTelemetry exporter endpoint, in this case an APM Server instance.
+  - We are passing command line flags to the container, setting the service name (_DOCKERFOO_) and the trace name (_TRACEBAR_).
+
 ## Demos
 To demonstrate how traces and metrics are sent to different back-ends, we are provising the following demos:
 

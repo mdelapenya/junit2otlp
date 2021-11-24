@@ -1,0 +1,15 @@
+.git
+.github
+demos
+build
+dist
+testresources
+
+.env
+.gitignore
+.goreleaser.yml
+*_test.go
+
+junit2otlp
+Makefile
+TEST-*.xml
