@@ -23,7 +23,7 @@ It's possible to run the binary as a Docker image. To build and use the image
 
 1. First build the Docker image using this Make goal:
 ```shell
-make buildDockerImage
+make build-docker-image
 ```
 
 2. Then start the Elastic Stack back-end:

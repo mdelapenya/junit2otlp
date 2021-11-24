@@ -18,7 +18,7 @@ define stop_demo
 	rm -fr demos/$(1)/build
 endef
 
-buildDockerImage:
+build-docker-image:
 	docker build -t mdelapenya/junit2otlp:latest .
 
 demo-start-elastic:
