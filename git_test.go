@@ -31,9 +31,10 @@ func init() {
 // FakeGitRepo downloads Octocat's hello-world repository from Github, providing a simple DSL to add/remove files and commit them into
 // the fake git repository
 type FakeGitRepo struct {
-	repo     *git.Repository
-	repoPath string
-	t        *testing.T
+	repo             *git.Repository
+	divergesFromBase bool
+	repoPath         string
+	t                *testing.T
 }
 
 func NewFakeGitRepo(t *testing.T) *FakeGitRepo {
@@ -65,6 +66,8 @@ func (r *FakeGitRepo) withBranch(branchName string) *FakeGitRepo {
 		r.t.Errorf(">> could not checkout to branch: %v", err)
 		return r
 	}
+
+	r.divergesFromBase = true
 
 	return r
 }
@@ -144,6 +147,8 @@ func (r *FakeGitRepo) withCommit(message string) *FakeGitRepo {
 		return nil
 	}
 
+	r.divergesFromBase = true
+
 	return r
 }
 
@@ -171,7 +176,23 @@ func (r *FakeGitRepo) removingFile(file string) *FakeGitRepo {
 }
 
 func (r *FakeGitRepo) read() *GitScm {
-	return NewGitScm(r.repoPath)
+	scm := NewGitScm(r.repoPath)
+
+	currentBranch, err := r.repo.Head()
+	if err != nil {
+		r.t.Errorf(">> could not get head branch for fake repo: %v", err)
+	}
+
+	master, err := r.repo.Branch("master")
+	if err != nil {
+		r.t.Errorf(">> could not get master branch for fake repo: %v", err)
+	}
+
+	scm.baseRef = master.Name
+	scm.headSha = currentBranch.Hash().String()
+	scm.isRequest = r.divergesFromBase
+
+	return scm
 }
 
 func TestCheckGitProvider(t *testing.T) {
@@ -256,7 +277,7 @@ func TestCheckGitProvider(t *testing.T) {
 	})
 }
 
-func TestGit_ContributeAttributes_WithCommitters(t *testing.T) {
+func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
 	defer os.Unsetenv("TARGET_BRANCH")
 
@@ -267,64 +288,80 @@ func TestGit_ContributeAttributes_WithCommitters(t *testing.T) {
 
 	atts := scm.contributeAttributes()
 
-	// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions is not set as scm.git.additions. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions is not set as scm.git.deletions. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files is not set as scm.git.modified.files. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors is not set as scm.authors. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "HEAD") }, "Branch is not set as scm.branch. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers is not set as scm.committers. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git is not set as scm.type. Attributes: %v", atts)
+	if scm.isRequest {
+		// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
+		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
+	}
+
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "HEAD") }, "should be set as scm.branch. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
-	}, "Remote is not set as scm.repository. Attributes: %v", atts)
+	}, "Remote should be set as scm.repository. Attributes: %v", atts)
 }
 
-func TestGit_ContributeAttributes_WithoutCommitters(t *testing.T) {
-	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
+func TestGit_ContributeAttributesForBranches(t *testing.T) {
+	scm := NewFakeGitRepo(t).read()
 	if scm == nil {
 		t.FailNow()
 	}
 
 	atts := scm.contributeAttributes()
 
-	assert.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions is not set as scm.git.additions. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions is not set as scm.git.deletions. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files is not set as scm.git.modified.files. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors is not set as scm.authors. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers is not set as scm.committers. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
 
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "HEAD") }, "Branch is not set as scm.branch. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git is not set as scm.type. Attributes: %v", atts)
+	if scm.isRequest {
+		assert.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
+	}
+
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "refs/heads/master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
-	}, "Remote is not set as scm.repository. Attributes: %v", atts)
+	}, "Remote should be set as scm.repository. Attributes: %v", atts)
 }
 
 func TestGit_ContributeCommitters(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "main")
+	os.Setenv("TARGET_BRANCH", "master")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewGitScm(workingDir)
+	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
+	if scm == nil {
+		t.FailNow()
+	}
 
 	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
 		t.Error()
 	}
 
-	// TODO: verify attributes in a consistent manner on the CI. UNtil then, check there are no errors
-	_, err = scm.contributeCommitters(headCommit, targetCommit)
+	atts, err := scm.contributeCommitters(headCommit, targetCommit)
 	if err != nil {
 		t.Error()
 	}
+
+	assert.Equal(t, 2, len(atts))
+	// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 }
 
 func TestGit_ContributeFilesAndLines(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "main")
+	os.Setenv("TARGET_BRANCH", "master")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewGitScm(workingDir)
+	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	if scm == nil {
+		t.FailNow()
+	}
 
 	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
@@ -332,17 +369,26 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 	}
 
 	// TODO: verify attributes in a consistent manner on the CI. Until then, check there are no errors
-	_, err = scm.contributeFilesAndLines(headCommit, targetCommit)
+	atts, err := scm.contributeFilesAndLines(headCommit, targetCommit)
 	if err != nil {
 		t.Error()
 	}
+
+	assert.Equal(t, 3, len(atts))
+	// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
+	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 }
 
-func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "main")
+func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
+	os.Setenv("TARGET_BRANCH", "master")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewGitScm(workingDir)
+	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	if scm == nil {
+		t.FailNow()
+	}
 
 	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
@@ -353,16 +399,18 @@ func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 	assert.NotNil(t, targetCommit)
 }
 
-func TestGit_CalculateCommitsWithoutTargetBranch(t *testing.T) {
-	scm := NewGitScm(workingDir)
+func TestGit_CalculateCommitsForBranches(t *testing.T) {
+	scm := NewFakeGitRepo(t).read()
+	if scm == nil {
+		t.FailNow()
+	}
 
 	headCommit, targetCommit, err := scm.calculateCommits()
-	if err == nil {
+	if err != nil {
 		t.Error()
 	}
 
-	assert.Nil(t, headCommit)
-	assert.Nil(t, targetCommit)
+	assert.Equal(t, headCommit, targetCommit)
 }
 
 func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
