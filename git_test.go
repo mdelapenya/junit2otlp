@@ -67,7 +67,7 @@ func TestGit_ContributeCommittersWithoutTargetBranch(t *testing.T) {
 		repositoryPath: workingDir,
 	}
 
-	repository, err := readRepository(scm)
+	repository, err := scm.openLocalRepository()
 	if err != nil {
 		t.Error()
 	}
