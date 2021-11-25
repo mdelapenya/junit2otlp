@@ -26,10 +26,12 @@ func init() {
 	originalServiceNameFlag = serviceNameFlag
 }
 
-type TestReader struct{}
+type TestReader struct {
+	testFile string
+}
 
 func (tr *TestReader) Read() ([]byte, error) {
-	b, err := ioutil.ReadFile("TEST-sample.xml")
+	b, err := ioutil.ReadFile(tr.testFile)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -87,7 +89,7 @@ func findAttributeInArray(attributes []TestTraceAttribute, key string) (TestTrac
 	return TestTraceAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
 }
 
-func Test_Main(t *testing.T) {
+func Test_Main_SampleXML(t *testing.T) {
 	ctx := context.Background()
 
 	// create file for otel to store the traces
@@ -193,7 +195,7 @@ func Test_Main(t *testing.T) {
 		os.Setenv(exporterEndpointKey, originalEndpoint)
 	}()
 
-	err = Main(context.Background(), &TestReader{})
+	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
 	if err != nil {
 		t.Error()
 	}
