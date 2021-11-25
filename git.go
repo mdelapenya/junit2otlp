@@ -15,6 +15,43 @@ type GitScm struct {
 	repositoryPath string
 }
 
+// calculateCommits this method calculates the commits between current branch (HEAD) and a target branch.
+// - The target branch has to be set as the TARGET_BRANCH environment variable
+// - HEAD branch must be a valid branch in the git repository
+func calculateCommits(repository *git.Repository) (*object.Commit, *object.Commit, error) {
+	targetBranchEnv := os.Getenv("TARGET_BRANCH")
+	if targetBranchEnv == "" {
+		return nil, nil, fmt.Errorf("not processing committers because we are not able to calculate the target branch. Please set the TARGET_BRANCH variable with the name of the branch where you want to merge current branch")
+	}
+
+	targetBranch, err := repository.Branch(targetBranchEnv)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "not able to retrieve the %s TARGET_BRANCH: %v", targetBranchEnv, err)
+	}
+
+	targetRef, err := repository.ResolveRevision(plumbing.Revision(targetBranch.Merge))
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "not able to retrieve ref from TARGET_BRANCH: %v", err)
+	}
+
+	targetCommit, err := repository.CommitObject(*targetRef)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "not able to retrieve commit from TARGET_BRANCH: %v", err)
+	}
+
+	headRef, err := repository.Head()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "not able to retrieve ref from HEAD: %v", err)
+	}
+
+	headCommit, err := repository.CommitObject(headRef.Hash())
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "not able to retrieve commit from HEAD: %v", err)
+	}
+
+	return headCommit, targetCommit, nil
+}
+
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
 func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
@@ -67,39 +104,9 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 func contributeCommitters(repository *git.Repository) (attributes []attribute.KeyValue, outError error) {
 	attributes = []attribute.KeyValue{}
 
-	targetBranchEnv := os.Getenv("TARGET_BRANCH")
-	if targetBranchEnv == "" {
-		outError = fmt.Errorf("not processing committers because we are not able to calculate the target branch. Please set the TARGET_BRANCH variable with the name of the branch where you want to merge current branch")
-		return
-	}
-
-	targetBranch, err := repository.Branch(targetBranchEnv)
+	headCommit, targetCommit, err := calculateCommits(repository)
 	if err != nil {
-		outError = errors.Wrapf(err, "not able to retrieve the %s TARGET_BRANCH: %v", targetBranchEnv, err)
-		return
-	}
-
-	targetRef, err := repository.ResolveRevision(plumbing.Revision(targetBranch.Merge))
-	if err != nil {
-		outError = errors.Wrapf(err, "not able to retrieve ref from TARGET_BRANCH: %v", err)
-		return
-	}
-
-	targetCommit, err := repository.CommitObject(*targetRef)
-	if err != nil {
-		outError = errors.Wrapf(err, "not able to retrieve commit from TARGET_BRANCH: %v", err)
-		return
-	}
-
-	headRef, err := repository.Head()
-	if err != nil {
-		outError = errors.Wrapf(err, "not able to retrieve ref from HEAD: %v", err)
-		return
-	}
-
-	headCommit, err := repository.CommitObject(headRef.Hash())
-	if err != nil {
-		outError = errors.Wrapf(err, "not able to retrieve commit from HEAD: %v", err)
+		outError = err
 		return
 	}
 
