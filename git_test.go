@@ -1,12 +1,24 @@
 package main
 
 import (
+	"log"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 )
+
+var workingDir string
+
+func init() {
+	wd, err := os.Getwd()
+	if err != nil {
+		log.Fatalln("Cannot get current working dir, which is needed by tests")
+	}
+
+	workingDir = wd
+}
 
 func TestCheckGitProvider(t *testing.T) {
 	t.Run("Running on Github", func(t *testing.T) {
@@ -54,14 +66,7 @@ func TestGit_ContributeAttributes_WithCommitters(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "main")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
-
-	scm := &GitScm{
-		repositoryPath: workingDir,
-	}
+	scm := NewGitScm(workingDir)
 
 	atts := scm.contributeAttributes()
 
@@ -82,14 +87,7 @@ func TestGit_ContributeAttributes_WithCommitters(t *testing.T) {
 }
 
 func TestGit_ContributeAttributes_WithoutCommitters(t *testing.T) {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
-
-	scm := &GitScm{
-		repositoryPath: workingDir,
-	}
+	scm := NewGitScm(workingDir)
 
 	atts := scm.contributeAttributes()
 
@@ -109,29 +107,17 @@ func TestGit_ContributeCommitters(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "main")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
-
-	scm := &GitScm{
-		repositoryPath: workingDir,
-	}
-
-	repository, err := scm.openLocalRepository()
-	if err != nil {
-		t.Error()
-	}
+	scm := NewGitScm(workingDir)
 
 	headSha, targetBranchEnv, _ := checkGitProvider()
 
-	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
 	if err != nil {
 		t.Error()
 	}
 
 	// TODO: verify attributes in a consistent manner on the CI. UNtil then, check there are no errors
-	_, err = contributeCommitters(repository, headCommit, targetCommit)
+	_, err = scm.contributeCommitters(headCommit, targetCommit)
 	if err != nil {
 		t.Error()
 	}
@@ -141,29 +127,17 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "main")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
-
-	scm := &GitScm{
-		repositoryPath: workingDir,
-	}
-
-	repository, err := scm.openLocalRepository()
-	if err != nil {
-		t.Error()
-	}
+	scm := NewGitScm(workingDir)
 
 	headSha, targetBranchEnv, _ := checkGitProvider()
 
-	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
 	if err != nil {
 		t.Error()
 	}
 
 	// TODO: verify attributes in a consistent manner on the CI. Until then, check there are no errors
-	_, err = contributeFilesAndLines(repository, headCommit, targetCommit)
+	_, err = scm.contributeFilesAndLines(headCommit, targetCommit)
 	if err != nil {
 		t.Error()
 	}
@@ -173,23 +147,11 @@ func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "main")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
-
-	scm := &GitScm{
-		repositoryPath: workingDir,
-	}
-
-	repository, err := scm.openLocalRepository()
-	if err != nil {
-		t.Error()
-	}
+	scm := NewGitScm(workingDir)
 
 	headSha, targetBranchEnv, _ := checkGitProvider()
 
-	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
 	if err != nil {
 		t.Error()
 	}
@@ -199,23 +161,11 @@ func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsWithoutTargetBranch(t *testing.T) {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
-
-	scm := &GitScm{
-		repositoryPath: workingDir,
-	}
-
-	repository, err := scm.openLocalRepository()
-	if err != nil {
-		t.Error()
-	}
+	scm := NewGitScm(workingDir)
 
 	headSha, targetBranchEnv, _ := checkGitProvider()
 
-	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
 	if err == nil {
 		t.Error()
 	}

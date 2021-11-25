@@ -24,7 +24,5 @@ func GetScm() Scm {
 	}
 
 	// .git exists
-	return &GitScm{
-		repositoryPath: workingDir,
-	}
+	return NewGitScm(workingDir)
 }

@@ -13,7 +13,23 @@ import (
 )
 
 type GitScm struct {
+	repository     *git.Repository
 	repositoryPath string
+}
+
+func NewGitScm(repositoryPath string) *GitScm {
+	scm := &GitScm{
+		repositoryPath: repositoryPath,
+	}
+
+	repository, err := scm.openLocalRepository()
+	if err != nil {
+		return nil
+	}
+
+	scm.repository = repository
+
+	return scm
 }
 
 // calculateCommits this method calculates the commits between current branch (HEAD) and a target branch.
@@ -80,11 +96,6 @@ func checkGitProvider() (string, string, string) {
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
 func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
-	repository, err := scm.openLocalRepository()
-	if err != nil {
-		return []attribute.KeyValue{}
-	}
-
 	headSha, targetBranchEnv, gitProvider := checkGitProvider()
 
 	log.Printf(">> HEAD SHA: %s", headSha)
@@ -99,29 +110,29 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 		gitAttributes = append(gitAttributes, attribute.Key(ScmProvider).String(gitProvider))
 	}
 
-	origin, err := repository.Remote("origin")
+	origin, err := scm.repository.Remote("origin")
 	if err != nil {
 		return gitAttributes
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(origin.Config().URLs))
 
-	branch, err := repository.Head()
+	branch, err := scm.repository.Head()
 	if err != nil {
 		return gitAttributes
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(branch.Name().String()))
 
-	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
 	if err != nil {
 		return gitAttributes
 	}
 
-	contributions := []func(*git.Repository, *object.Commit, *object.Commit) ([]attribute.KeyValue, error){
-		contributeCommitters, contributeFilesAndLines,
+	contributions := []func(*object.Commit, *object.Commit) ([]attribute.KeyValue, error){
+		scm.contributeCommitters, scm.contributeFilesAndLines,
 	}
 
 	for _, contribution := range contributions {
-		contributtedAttributes, err := contribution(repository, headCommit, targetCommit)
+		contributtedAttributes, err := contribution(headCommit, targetCommit)
 		if err != nil {
 			fmt.Printf(">> not contributing attributes: %v", err)
 			continue
@@ -137,7 +148,7 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 // the list of commits, storing the author and the committer for each commit, contributing an array of Strings
 // attribute including the email of the author/commiter.
 // This method will return the current state of the contributed attributes at the moment of an eventual failure.
-func contributeCommitters(repository *git.Repository, headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
+func (scm *GitScm) contributeCommitters(headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
 	attributes = []attribute.KeyValue{}
 
 	fmt.Printf(">>> HEAD commit: %v", headCommit)
@@ -156,7 +167,7 @@ func contributeCommitters(repository *git.Repository, headCommit *object.Commit,
 
 	ancestor := commits[0]
 
-	commitsIterator, err := repository.Log(&git.LogOptions{From: headCommit.Hash, Since: &ancestor.Author.When})
+	commitsIterator, err := scm.repository.Log(&git.LogOptions{From: headCommit.Hash, Since: &ancestor.Author.When})
 	if err != nil {
 		outError = errors.Wrapf(err, "not able to retrieve commits between HEAD and TARGET_BRANCH: %v", err)
 		return
@@ -186,7 +197,7 @@ func contributeCommitters(repository *git.Repository, headCommit *object.Commit,
 // the list of commits, storing the modified files for each commit; for each modified file it will get the added and deleted lines.
 // It will contribute an Integer attribute including number of modified files, including added and deleted lines in the changeset.
 // This method will return the current state of the contributed attributes at the moment of an eventual failure.
-func contributeFilesAndLines(repository *git.Repository, headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
+func (scm *GitScm) contributeFilesAndLines(headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
 	attributes = []attribute.KeyValue{}
 
 	headTree, err := headCommit.Tree()
