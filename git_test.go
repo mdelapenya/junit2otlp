@@ -21,44 +21,84 @@ func init() {
 }
 
 func TestCheckGitProvider(t *testing.T) {
-	t.Run("Running on Github", func(t *testing.T) {
+	t.Run("Running on Github for Branches", func(t *testing.T) {
+		os.Setenv("GITHUB_SHA", "0123456")
+		defer func() {
+			os.Unsetenv("GITHUB_SHA")
+		}()
+
+		sha, baseRef, provider, request := checkGitProvider()
+		assert.Equal(t, "0123456", sha)
+		assert.Equal(t, "", baseRef)
+		assert.Equal(t, "Github", provider)
+		assert.False(t, request)
+	})
+
+	t.Run("Running on Github for Pull Requests", func(t *testing.T) {
 		os.Setenv("GITHUB_SHA", "0123456")
 		os.Setenv("GITHUB_BASE_REF", "main")
-		defer os.Unsetenv("GITHUB_SHA")
-		defer os.Unsetenv("GITHUB_BASE_REF")
+		os.Setenv("GITHUB_HEAD_REF", "feature/pr-23")
+		defer func() {
+			os.Unsetenv("GITHUB_SHA")
+			os.Unsetenv("GITHUB_BASE_REF")
+			os.Unsetenv("GITHUB_HEAD_REF")
+		}()
 
-		sha, baseRef, provider := checkGitProvider()
+		sha, baseRef, provider, request := checkGitProvider()
 		assert.Equal(t, "0123456", sha)
 		assert.Equal(t, "main", baseRef)
 		assert.Equal(t, "Github", provider)
+		assert.True(t, request)
 	})
 
-	t.Run("Running on Gitlab", func(t *testing.T) {
+	t.Run("Running on Gitlab for Branches", func(t *testing.T) {
+		os.Setenv("CI_COMMIT_BRANCH", "branch")
 		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-		defer os.Unsetenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
-		defer os.Unsetenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+		defer func() {
+			os.Unsetenv("CI_COMMIT_BRANCH")
+			os.Unsetenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
+			os.Unsetenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+		}()
 
-		sha, baseRef, provider := checkGitProvider()
+		sha, baseRef, provider, request := checkGitProvider()
 		assert.Equal(t, "0123456", sha)
 		assert.Equal(t, "main", baseRef)
 		assert.Equal(t, "Gitlab", provider)
+		assert.False(t, request)
+	})
+
+	t.Run("Running on Gitlab for Merge Requests", func(t *testing.T) {
+		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
+		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
+		defer func() {
+			os.Unsetenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
+			os.Unsetenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+		}()
+
+		sha, baseRef, provider, request := checkGitProvider()
+		assert.Equal(t, "0123456", sha)
+		assert.Equal(t, "main", baseRef)
+		assert.Equal(t, "Gitlab", provider)
+		assert.True(t, request)
 	})
 
 	t.Run("Running on Local machine with TARGET_BRANCH", func(t *testing.T) {
 		os.Setenv("TARGET_BRANCH", "main")
 		defer os.Unsetenv("TARGET_BRANCH")
-		sha, baseRef, provider := checkGitProvider()
+		sha, baseRef, provider, request := checkGitProvider()
 		assert.Equal(t, "", sha)
 		assert.Equal(t, "main", baseRef)
 		assert.Equal(t, "", provider)
+		assert.False(t, request)
 	})
 
 	t.Run("Running on Local machine without TARGET_BRANCH", func(t *testing.T) {
-		sha, baseRef, provider := checkGitProvider()
+		sha, baseRef, provider, request := checkGitProvider()
 		assert.Equal(t, "", sha)
 		assert.Equal(t, "", baseRef)
 		assert.Equal(t, "", provider)
+		assert.False(t, request)
 	})
 }
 

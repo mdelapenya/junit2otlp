@@ -14,6 +14,7 @@ import (
 type GitScm struct {
 	baseRef        string
 	headSha        string
+	isRequest      bool // if the tool is evaluating a pull/merge request or a branch
 	provider       string
 	repository     *git.Repository
 	repositoryPath string
@@ -31,10 +32,11 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
-	headSha, baseRef, gitProvider := checkGitProvider()
+	headSha, baseRef, gitProvider, request := checkGitProvider()
 
 	scm.headSha = headSha
 	scm.baseRef = baseRef
+	scm.isRequest = request
 	scm.provider = gitProvider
 
 	fmt.Printf(">> HEAD SHA: %s", headSha)
@@ -85,23 +87,28 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 // checkGitProvider identies the head sha and target branch from the environment variables that are
 // populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
 // look up this tool-specific variable for the target branch.
-func checkGitProvider() (string, string, string) {
+func checkGitProvider() (string, string, string, bool) {
 	// is Github?
 	sha := os.Getenv("GITHUB_SHA")
-	baseRef := os.Getenv("GITHUB_BASE_REF")
-	if sha != "" && baseRef != "" {
-		return sha, baseRef, "Github"
+	baseRef := os.Getenv("GITHUB_BASE_REF") // only present for pull requests on Github Actions
+	headRef := os.Getenv("GITHUB_HEAD_REF") // only present for pull requests on Github Actions
+	if sha != "" && baseRef != "" && headRef != "" {
+		return sha, baseRef, "Github", true
+	} else if sha != "" {
+		return sha, "", "Github", false
 	}
 
 	// is Gitlab?
-	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
-	baseRef = os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+	commitBranch := os.Getenv("CI_COMMIT_BRANCH")              // only present on branches on Gitlab CI
+	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")      // only present on merge requests on Gitlab CI
+	baseRef = os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME") // only present on merge requests on Gitlab CI
 	if sha != "" && baseRef != "" {
-		return sha, baseRef, "Gitlab"
+		return sha, baseRef, "Gitlab", commitBranch == ""
 	}
 
+	// in local branches, we are not in pull/merge requests
 	baseRef = os.Getenv("TARGET_BRANCH")
-	return "", baseRef, ""
+	return "", baseRef, "", false
 }
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
