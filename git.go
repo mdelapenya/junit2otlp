@@ -18,12 +18,7 @@ type GitScm struct {
 // calculateCommits this method calculates the commits between current branch (HEAD) and a target branch.
 // - The target branch has to be set as the TARGET_BRANCH environment variable
 // - HEAD branch must be a valid branch in the git repository
-func calculateCommits(repository *git.Repository) (*object.Commit, *object.Commit, error) {
-	headSha, targetBranchEnv := checkGitProvider()
-	if targetBranchEnv == "" {
-		return nil, nil, fmt.Errorf("not processing committers because we are not able to calculate the target branch. Please set the TARGET_BRANCH variable with the name of the branch where you want to merge current branch")
-	}
-
+func calculateCommits(repository *git.Repository, headSha string, targetBranchEnv string) (*object.Commit, *object.Commit, error) {
 	targetBranch, err := repository.Branch(targetBranchEnv)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "not able to retrieve the %s TARGET_BRANCH: %v", targetBranchEnv, err)
@@ -62,23 +57,23 @@ func calculateCommits(repository *git.Repository) (*object.Commit, *object.Commi
 // checkGitProvider identies the head sha and target branch from the environment variables that are
 // populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
 // look up this tool-specific variable for the target branch.
-func checkGitProvider() (string, string) {
+func checkGitProvider() (string, string, string) {
 	// is Github?
 	sha := os.Getenv("GITHUB_SHA")
 	baseRef := os.Getenv("GITHUB_BASE_REF")
 	if sha != "" && baseRef != "" {
-		return sha, baseRef
+		return sha, baseRef, "Github"
 	}
 
 	// is Gitlab?
 	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
 	baseRef = os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
 	if sha != "" && baseRef != "" {
-		return sha, baseRef
+		return sha, baseRef, "Gitlab"
 	}
 
 	baseRef = os.Getenv("TARGET_BRANCH")
-	return "", baseRef
+	return "", baseRef, ""
 }
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
@@ -89,9 +84,15 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 		return []attribute.KeyValue{}
 	}
 
+	headSha, targetBranchEnv, gitProvider := checkGitProvider()
+
 	// from now on, this is a Git repository
 	gitAttributes := []attribute.KeyValue{
 		attribute.Key(ScmType).String("git"),
+	}
+
+	if gitProvider != "" {
+		gitAttributes = append(gitAttributes, attribute.Key(ScmProvider).String(gitProvider))
 	}
 
 	origin, err := repository.Remote("origin")
@@ -106,7 +107,7 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(branch.Name().String()))
 
-	headCommit, targetCommit, err := calculateCommits(repository)
+	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
 	if err != nil {
 		return gitAttributes
 	}

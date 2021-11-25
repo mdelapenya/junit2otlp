@@ -12,6 +12,7 @@ const (
 	ScmAuthors    = "scm.authors"
 	ScmBranch     = "scm.branch"
 	ScmCommitters = "scm.committers"
+	ScmProvider   = "scm.provider"
 	ScmRepository = "scm.repository"
 	ScmType       = "scm.type"
 

@@ -15,9 +15,10 @@ func TestCheckGitProvider(t *testing.T) {
 		defer os.Unsetenv("GITHUB_SHA")
 		defer os.Unsetenv("GITHUB_BASE_REF")
 
-		sha, baseRef := checkGitProvider()
+		sha, baseRef, provider := checkGitProvider()
 		assert.Equal(t, "0123456", sha)
 		assert.Equal(t, "main", baseRef)
+		assert.Equal(t, "Github", provider)
 	})
 
 	t.Run("Running on Gitlab", func(t *testing.T) {
@@ -26,23 +27,26 @@ func TestCheckGitProvider(t *testing.T) {
 		defer os.Unsetenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
 		defer os.Unsetenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
 
-		sha, baseRef := checkGitProvider()
+		sha, baseRef, provider := checkGitProvider()
 		assert.Equal(t, "0123456", sha)
 		assert.Equal(t, "main", baseRef)
+		assert.Equal(t, "Gitlab", provider)
 	})
 
 	t.Run("Running on Local machine with TARGET_BRANCH", func(t *testing.T) {
 		os.Setenv("TARGET_BRANCH", "main")
 		defer os.Unsetenv("TARGET_BRANCH")
-		sha, baseRef := checkGitProvider()
+		sha, baseRef, provider := checkGitProvider()
 		assert.Equal(t, "", sha)
 		assert.Equal(t, "main", baseRef)
+		assert.Equal(t, "", provider)
 	})
 
 	t.Run("Running on Local machine without TARGET_BRANCH", func(t *testing.T) {
-		sha, baseRef := checkGitProvider()
+		sha, baseRef, provider := checkGitProvider()
 		assert.Equal(t, "", sha)
 		assert.Equal(t, "", baseRef)
+		assert.Equal(t, "", provider)
 	})
 }
 
@@ -119,7 +123,9 @@ func TestGit_ContributeCommitters(t *testing.T) {
 		t.Error()
 	}
 
-	headCommit, targetCommit, err := calculateCommits(repository)
+	headSha, targetBranchEnv, _ := checkGitProvider()
+
+	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
 	if err != nil {
 		t.Error()
 	}
@@ -149,7 +155,9 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 		t.Error()
 	}
 
-	headCommit, targetCommit, err := calculateCommits(repository)
+	headSha, targetBranchEnv, _ := checkGitProvider()
+
+	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
 	if err != nil {
 		t.Error()
 	}
@@ -179,7 +187,9 @@ func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 		t.Error()
 	}
 
-	headCommit, targetCommit, err := calculateCommits(repository)
+	headSha, targetBranchEnv, _ := checkGitProvider()
+
+	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
 	if err != nil {
 		t.Error()
 	}
@@ -203,7 +213,9 @@ func TestGit_CalculateCommitsWithoutTargetBranch(t *testing.T) {
 		t.Error()
 	}
 
-	headCommit, targetCommit, err := calculateCommits(repository)
+	headSha, targetBranchEnv, _ := checkGitProvider()
+
+	headCommit, targetCommit, err := calculateCommits(repository, headSha, targetBranchEnv)
 	if err == nil {
 		t.Error()
 	}
