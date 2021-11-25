@@ -13,6 +13,9 @@ import (
 )
 
 type GitScm struct {
+	baseRef        string
+	headSha        string
+	provider       string
 	repository     *git.Repository
 	repositoryPath string
 }
@@ -29,13 +32,26 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
+	headSha, baseRef, gitProvider := checkGitProvider()
+
+	scm.headSha = headSha
+	scm.baseRef = baseRef
+	scm.provider = gitProvider
+
+	log.Printf(">> HEAD SHA: %s", headSha)
+	log.Printf(">> TARGET_BRANCH: %s", baseRef)
+
 	return scm
 }
 
 // calculateCommits this method calculates the commits between current branch (HEAD) and a target branch.
 // - The target branch has to be set as the TARGET_BRANCH environment variable
 // - HEAD branch must be a valid branch in the git repository
-func calculateCommits(repository *git.Repository, headSha string, targetBranchEnv string) (*object.Commit, *object.Commit, error) {
+func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
+	repository := scm.repository
+	headSha := scm.headSha
+	targetBranchEnv := scm.baseRef
+
 	targetBranch, err := repository.Branch(targetBranchEnv)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "not able to retrieve the %s TARGET_BRANCH: %v", targetBranchEnv, err)
@@ -96,18 +112,13 @@ func checkGitProvider() (string, string, string) {
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
 func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
-	headSha, targetBranchEnv, gitProvider := checkGitProvider()
-
-	log.Printf(">> HEAD SHA: %s", headSha)
-	log.Printf(">> TARGET_BRANCH: %s", targetBranchEnv)
-
 	// from now on, this is a Git repository
 	gitAttributes := []attribute.KeyValue{
 		attribute.Key(ScmType).String("git"),
 	}
 
-	if gitProvider != "" {
-		gitAttributes = append(gitAttributes, attribute.Key(ScmProvider).String(gitProvider))
+	if scm.provider != "" {
+		gitAttributes = append(gitAttributes, attribute.Key(ScmProvider).String(scm.provider))
 	}
 
 	origin, err := scm.repository.Remote("origin")
@@ -122,7 +133,7 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(branch.Name().String()))
 
-	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
 		return gitAttributes
 	}

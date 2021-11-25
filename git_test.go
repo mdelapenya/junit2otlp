@@ -109,9 +109,7 @@ func TestGit_ContributeCommitters(t *testing.T) {
 
 	scm := NewGitScm(workingDir)
 
-	headSha, targetBranchEnv, _ := checkGitProvider()
-
-	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
 		t.Error()
 	}
@@ -129,9 +127,7 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 
 	scm := NewGitScm(workingDir)
 
-	headSha, targetBranchEnv, _ := checkGitProvider()
-
-	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
 		t.Error()
 	}
@@ -149,9 +145,7 @@ func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 
 	scm := NewGitScm(workingDir)
 
-	headSha, targetBranchEnv, _ := checkGitProvider()
-
-	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
 		t.Error()
 	}
@@ -163,9 +157,7 @@ func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 func TestGit_CalculateCommitsWithoutTargetBranch(t *testing.T) {
 	scm := NewGitScm(workingDir)
 
-	headSha, targetBranchEnv, _ := checkGitProvider()
-
-	headCommit, targetCommit, err := calculateCommits(scm.repository, headSha, targetBranchEnv)
+	headCommit, targetCommit, err := scm.calculateCommits()
 	if err == nil {
 		t.Error()
 	}
