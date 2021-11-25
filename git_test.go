@@ -8,6 +8,44 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+func TestCheckGitProvider(t *testing.T) {
+	t.Run("Running on Github", func(t *testing.T) {
+		os.Setenv("GITHUB_SHA", "0123456")
+		os.Setenv("GITHUB_BASE_REF", "main")
+		defer os.Unsetenv("GITHUB_SHA")
+		defer os.Unsetenv("GITHUB_BASE_REF")
+
+		sha, baseRef := checkGitProvider()
+		assert.Equal(t, "0123456", sha)
+		assert.Equal(t, "main", baseRef)
+	})
+
+	t.Run("Running on Gitlab", func(t *testing.T) {
+		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
+		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
+		defer os.Unsetenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
+		defer os.Unsetenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+
+		sha, baseRef := checkGitProvider()
+		assert.Equal(t, "0123456", sha)
+		assert.Equal(t, "main", baseRef)
+	})
+
+	t.Run("Running on Local machine with TARGET_BRANCH", func(t *testing.T) {
+		os.Setenv("TARGET_BRANCH", "main")
+		defer os.Unsetenv("TARGET_BRANCH")
+		sha, baseRef := checkGitProvider()
+		assert.Equal(t, "", sha)
+		assert.Equal(t, "main", baseRef)
+	})
+
+	t.Run("Running on Local machine without TARGET_BRANCH", func(t *testing.T) {
+		sha, baseRef := checkGitProvider()
+		assert.Equal(t, "", sha)
+		assert.Equal(t, "", baseRef)
+	})
+}
+
 func TestGit_ContributeAttributes_WithCommitters(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "main")
 	defer os.Unsetenv("TARGET_BRANCH")

@@ -19,7 +19,7 @@ type GitScm struct {
 // - The target branch has to be set as the TARGET_BRANCH environment variable
 // - HEAD branch must be a valid branch in the git repository
 func calculateCommits(repository *git.Repository) (*object.Commit, *object.Commit, error) {
-	targetBranchEnv := os.Getenv("TARGET_BRANCH")
+	headSha, targetBranchEnv := checkGitProvider()
 	if targetBranchEnv == "" {
 		return nil, nil, fmt.Errorf("not processing committers because we are not able to calculate the target branch. Please set the TARGET_BRANCH variable with the name of the branch where you want to merge current branch")
 	}
@@ -39,17 +39,46 @@ func calculateCommits(repository *git.Repository) (*object.Commit, *object.Commi
 		return nil, nil, errors.Wrapf(err, "not able to retrieve commit from TARGET_BRANCH: %v", err)
 	}
 
-	headRef, err := repository.Head()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "not able to retrieve ref from HEAD: %v", err)
+	var headRefSha plumbing.Hash
+	if headSha == "" {
+		headRef, err := repository.Head()
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "not able to retrieve ref from HEAD: %v", err)
+		}
+
+		headRefSha = headRef.Hash()
+	} else {
+		headRefSha = plumbing.NewHash(headSha)
 	}
 
-	headCommit, err := repository.CommitObject(headRef.Hash())
+	headCommit, err := repository.CommitObject(headRefSha)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "not able to retrieve commit from HEAD: %v", err)
 	}
 
 	return headCommit, targetCommit, nil
+}
+
+// checkGitProvider identies the head sha and target branch from the environment variables that are
+// populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
+// look up this tool-specific variable for the target branch.
+func checkGitProvider() (string, string) {
+	// is Github?
+	sha := os.Getenv("GITHUB_SHA")
+	baseRef := os.Getenv("GITHUB_BASE_REF")
+	if sha != "" && baseRef != "" {
+		return sha, baseRef
+	}
+
+	// is Gitlab?
+	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
+	baseRef = os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+	if sha != "" && baseRef != "" {
+		return sha, baseRef
+	}
+
+	baseRef = os.Getenv("TARGET_BRANCH")
+	return "", baseRef
 }
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
