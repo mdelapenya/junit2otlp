@@ -40,9 +40,6 @@ func NewGitScm(repositoryPath string) *GitScm {
 	scm.isRequest = request
 	scm.provider = gitProvider
 
-	fmt.Printf(">> HEAD SHA: %s", headSha)
-	fmt.Printf(">> BASE_REF: %s", baseRef)
-
 	return scm
 }
 
@@ -169,9 +166,6 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 // This method will return the current state of the contributed attributes at the moment of an eventual failure.
 func (scm *GitScm) contributeCommitters(headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
 	attributes = []attribute.KeyValue{}
-
-	fmt.Printf(">>> HEAD commit: %v", headCommit)
-	fmt.Printf(">>> TARGET commit: %v", targetCommit)
 
 	commits, err := headCommit.MergeBase(targetCommit)
 	if err != nil {
