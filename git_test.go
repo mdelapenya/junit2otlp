@@ -93,6 +93,36 @@ func TestGit_ContributeCommitters(t *testing.T) {
 	}
 }
 
+func TestGit_ContributeFilesAndLines(t *testing.T) {
+	os.Setenv("TARGET_BRANCH", "main")
+	defer os.Unsetenv("TARGET_BRANCH")
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		t.Error()
+	}
+
+	scm := &GitScm{
+		repositoryPath: workingDir,
+	}
+
+	repository, err := scm.openLocalRepository()
+	if err != nil {
+		t.Error()
+	}
+
+	headCommit, targetCommit, err := calculateCommits(repository)
+	if err != nil {
+		t.Error()
+	}
+
+	// TODO: verify attributes in a consistent manner on the CI. Until then, check there are no errors
+	_, err = contributeFilesAndLines(repository, headCommit, targetCommit)
+	if err != nil {
+		t.Error()
+	}
+}
+
 func TestGit_CalculateCommitsWithTargetBranch(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "main")
 	defer os.Unsetenv("TARGET_BRANCH")
