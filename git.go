@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	git "github.com/go-git/go-git/v5"
@@ -38,8 +37,8 @@ func NewGitScm(repositoryPath string) *GitScm {
 	scm.baseRef = baseRef
 	scm.provider = gitProvider
 
-	log.Printf(">> HEAD SHA: %s", headSha)
-	log.Printf(">> TARGET_BRANCH: %s", baseRef)
+	fmt.Printf(">> HEAD SHA: %s", headSha)
+	fmt.Printf(">> BASE_REF: %s", baseRef)
 
 	return scm
 }
