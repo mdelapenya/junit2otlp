@@ -9,9 +9,9 @@ type GitScm struct {
 	repositoryPath string
 }
 
-// contributeOtelAttributes this method never fails, returning the current state of the contributed attributes
+// contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
-func (scm *GitScm) contributeOtelAttributes() []attribute.KeyValue {
+func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	repository, err := git.PlainOpen(scm.repositoryPath)
 	if err != nil {
 		return []attribute.KeyValue{}

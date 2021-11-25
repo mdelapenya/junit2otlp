@@ -18,7 +18,7 @@ func TestGit(t *testing.T) {
 		repositoryPath: workingDir,
 	}
 
-	atts := scm.contributeOtelAttributes()
+	atts := scm.contributeAttributes()
 
 	assert.Equal(t, 3, len(atts))
 

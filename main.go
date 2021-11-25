@@ -59,7 +59,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 
 	scm := GetScm()
 	if scm != nil {
-		scmAttributes := scm.contributeOtelAttributes()
+		scmAttributes := scm.contributeAttributes()
 		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
 	}
 
