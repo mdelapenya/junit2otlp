@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	git "github.com/go-git/go-git/v5"
@@ -85,6 +86,9 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 
 	headSha, targetBranchEnv, gitProvider := checkGitProvider()
+
+	log.Printf(">> HEAD SHA: %s", headSha)
+	log.Printf(">> TARGET_BRANCH: %s", targetBranchEnv)
 
 	// from now on, this is a Git repository
 	gitAttributes := []attribute.KeyValue{
