@@ -3,6 +3,11 @@ package main
 const (
 	Junit2otlp = "junit2otlp"
 
+	// git keys
+	GitAdditions     = "scm.git.additions"
+	GitDeletions     = "scm.git.deletions"
+	GitModifiedFiles = "scm.git.files.modified"
+
 	// scm keys
 	ScmAuthors    = "scm.authors"
 	ScmBranch     = "scm.branch"

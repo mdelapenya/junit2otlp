@@ -77,12 +77,17 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(branch.Name().String()))
 
-	contributions := []func(*git.Repository) ([]attribute.KeyValue, error){
-		contributeCommitters,
+	headCommit, targetCommit, err := calculateCommits(repository)
+	if err != nil {
+		return gitAttributes
+	}
+
+	contributions := []func(*git.Repository, *object.Commit, *object.Commit) ([]attribute.KeyValue, error){
+		contributeCommitters, contributeFilesAndLines,
 	}
 
 	for _, contribution := range contributions {
-		contributtedAttributes, err := contribution(repository)
+		contributtedAttributes, err := contribution(repository, headCommit, targetCommit)
 		if err != nil {
 			fmt.Printf(">> not contributing attributes: %v", err)
 			continue
@@ -94,21 +99,12 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	return gitAttributes
 }
 
-// contributeCommitters this method calculates the commits between current branch (HEAD) and a target branch.
-// - The target branch has to be set as the TARGET_BRANCH environment variable
-// - HEAD branch must be a valid branch in the git repository
-// The algorithm will look for the first ancestor between HEAD and the TARGET_BRANCH, and will iterate through
+// contributeCommitters this algorithm will look for the first ancestor between HEAD and the TARGET_BRANCH, and will iterate through
 // the list of commits, storing the author and the committer for each commit, contributing an array of Strings
 // attribute including the email of the author/commiter.
 // This method will return the current state of the contributed attributes at the moment of an eventual failure.
-func contributeCommitters(repository *git.Repository) (attributes []attribute.KeyValue, outError error) {
+func contributeCommitters(repository *git.Repository, headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
 	attributes = []attribute.KeyValue{}
-
-	headCommit, targetCommit, err := calculateCommits(repository)
-	if err != nil {
-		outError = err
-		return
-	}
 
 	commits, err := headCommit.MergeBase(targetCommit)
 	if err != nil {
@@ -145,6 +141,48 @@ func contributeCommitters(repository *git.Repository) (attributes []attribute.Ke
 	if len(committers) > 0 {
 		attributes = append(attributes, attribute.Key(ScmCommitters).StringSlice(mapToArray(committers)))
 	}
+
+	return
+}
+
+// contributeFilesAndLines this algorithm will look for the first ancestor between HEAD and the TARGET_BRANCH, and will iterate through
+// the list of commits, storing the modified files for each commit; for each modified file it will get the added and deleted lines.
+// It will contribute an Integer attribute including number of modified files, including added and deleted lines in the changeset.
+// This method will return the current state of the contributed attributes at the moment of an eventual failure.
+func contributeFilesAndLines(repository *git.Repository, headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
+	attributes = []attribute.KeyValue{}
+
+	headTree, err := headCommit.Tree()
+	if err != nil {
+		outError = errors.Wrapf(err, "not able to find a HEAD tree: %v", err)
+		return
+	}
+
+	targetTree, err := targetCommit.Tree()
+	if err != nil {
+		outError = errors.Wrapf(err, "not able to find a TARGET_BRANCH tree: %v", err)
+		return
+	}
+
+	patch, err := headTree.Patch(targetTree)
+	if err != nil {
+		outError = errors.Wrapf(err, "not able to find the pathc between HEAD and TARGET_BRANCH trees: %v", err)
+		return
+	}
+
+	var changedFiles []string
+	var additions int = 0
+	var deletions int = 0
+	for _, fileStat := range patch.Stats() {
+		additions += fileStat.Addition
+		deletions += fileStat.Deletion
+
+		changedFiles = append(changedFiles, fileStat.Name)
+	}
+
+	attributes = append(attributes, attribute.Key(GitAdditions).Int(additions))
+	attributes = append(attributes, attribute.Key(GitDeletions).Int(deletions))
+	attributes = append(attributes, attribute.Key(GitModifiedFiles).Int(len(changedFiles)))
 
 	return
 }
