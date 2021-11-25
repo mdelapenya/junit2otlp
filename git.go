@@ -47,38 +47,34 @@ func NewGitScm(repositoryPath string) *GitScm {
 // - The target branch has to be set as the TARGET_BRANCH environment variable
 // - HEAD branch must be a valid branch in the git repository
 func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
-	repository := scm.repository
-	headSha := scm.headSha
-	targetBranchEnv := scm.baseRef
-
-	targetBranch, err := repository.Branch(targetBranchEnv)
+	targetBranch, err := scm.repository.Branch(scm.baseRef)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "not able to retrieve the %s TARGET_BRANCH: %v", targetBranchEnv, err)
+		return nil, nil, errors.Wrapf(err, "not able to retrieve the %s TARGET_BRANCH: %v", scm.baseRef, err)
 	}
 
-	targetRef, err := repository.ResolveRevision(plumbing.Revision(targetBranch.Merge))
+	targetRef, err := scm.repository.ResolveRevision(plumbing.Revision(targetBranch.Merge))
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "not able to retrieve ref from TARGET_BRANCH: %v", err)
 	}
 
-	targetCommit, err := repository.CommitObject(*targetRef)
+	targetCommit, err := scm.repository.CommitObject(*targetRef)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "not able to retrieve commit from TARGET_BRANCH: %v", err)
 	}
 
 	var headRefSha plumbing.Hash
-	if headSha == "" {
-		headRef, err := repository.Head()
+	if scm.headSha == "" {
+		headRef, err := scm.repository.Head()
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "not able to retrieve ref from HEAD: %v", err)
 		}
 
 		headRefSha = headRef.Hash()
 	} else {
-		headRefSha = plumbing.NewHash(headSha)
+		headRefSha = plumbing.NewHash(scm.headSha)
 	}
 
-	headCommit, err := repository.CommitObject(headRefSha)
+	headCommit, err := scm.repository.CommitObject(headRefSha)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "not able to retrieve commit from HEAD: %v", err)
 	}
