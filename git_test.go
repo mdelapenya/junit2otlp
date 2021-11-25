@@ -20,9 +20,9 @@ func TestGit(t *testing.T) {
 
 	atts := scm.contributeAttributes()
 
-	assert.Equal(t, 3, len(atts))
-
+	assert.Condition(t, func() bool { return keyExists(t, atts, ScmAuthors) }, "Authors is not set as scm.authors. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExists(t, atts, ScmBranch) }, "Branch is not set as scm.branch. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExists(t, atts, ScmCommitters) }, "Committers is not set as scm.committers. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmType, "git")
 	}, "Git is not set as scm.type. Attributes: %v", atts)
