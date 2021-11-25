@@ -32,6 +32,51 @@ func TestGit(t *testing.T) {
 	}, "Remote is not set as scm.repository. Attributes: %v", atts)
 }
 
+func TestGit_ContributeCommitters(t *testing.T) {
+	os.Setenv("TARGET_BRANCH", "main")
+	defer os.Unsetenv("TARGET_BRANCH")
+
+	workingDir, err := os.Getwd()
+	if err != nil {
+		t.Error()
+	}
+
+	scm := &GitScm{
+		repositoryPath: workingDir,
+	}
+
+	repository, err := scm.openLocalRepository()
+	if err != nil {
+		t.Error()
+	}
+
+	// TODO: verify attributes in a consistent manner on the CI. UNtil then, check there are no errors
+	_, err = contributeCommitters(repository)
+	if err != nil {
+		t.Error()
+	}
+}
+
+func TestGit_ContributeCommittersWithoutTargetBranch(t *testing.T) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		t.Error()
+	}
+
+	scm := &GitScm{
+		repositoryPath: workingDir,
+	}
+
+	repository, err := readRepository(scm)
+	if err != nil {
+		t.Error()
+	}
+
+	atts, err := contributeCommitters(repository)
+	assert.NotNil(t, err)
+	assert.Empty(t, atts)
+}
+
 func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
 	for _, att := range attributes {
 		if string(att.Key) == key {

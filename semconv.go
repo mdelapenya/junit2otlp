@@ -4,7 +4,9 @@ const (
 	Junit2otlp = "junit2otlp"
 
 	// scm keys
+	ScmAuthors    = "scm.authors"
 	ScmBranch     = "scm.branch"
+	ScmCommitters = "scm.committers"
 	ScmRepository = "scm.repository"
 	ScmType       = "scm.type"
 
