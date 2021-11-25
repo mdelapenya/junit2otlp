@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -180,7 +181,8 @@ func (scm *GitScm) contributeCommitters(headCommit *object.Commit, targetCommit 
 
 	ancestor := commits[0]
 
-	commitsIterator, err := scm.repository.Log(&git.LogOptions{From: headCommit.Hash, Since: &ancestor.Author.When})
+	when := ancestor.Author.When.Add(time.Millisecond * 1) // adding one millisecond to avoid including the ancestor in the log
+	commitsIterator, err := scm.repository.Log(&git.LogOptions{From: headCommit.Hash, Since: &when})
 	if err != nil {
 		outError = errors.Wrapf(err, "not able to retrieve commits between HEAD and TARGET_BRANCH: %v", err)
 		return
@@ -225,7 +227,7 @@ func (scm *GitScm) contributeFilesAndLines(headCommit *object.Commit, targetComm
 		return
 	}
 
-	patch, err := headTree.Patch(targetTree)
+	patch, err := targetTree.Patch(headTree)
 	if err != nil {
 		outError = errors.Wrapf(err, "not able to find the pathc between HEAD and TARGET_BRANCH trees: %v", err)
 		return
