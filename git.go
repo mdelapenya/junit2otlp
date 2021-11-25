@@ -106,6 +106,9 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 func contributeCommitters(repository *git.Repository, headCommit *object.Commit, targetCommit *object.Commit) (attributes []attribute.KeyValue, outError error) {
 	attributes = []attribute.KeyValue{}
 
+	fmt.Printf(">>> HEAD commit: %v", headCommit)
+	fmt.Printf(">>> TARGET commit: %v", targetCommit)
+
 	commits, err := headCommit.MergeBase(targetCommit)
 	if err != nil {
 		outError = errors.Wrapf(err, "not able to find a common ancestor between HEAD and TARGET_BRANCH: %v", err)
