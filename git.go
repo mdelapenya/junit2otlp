@@ -142,7 +142,12 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 
 	contributions := []func(*object.Commit, *object.Commit) ([]attribute.KeyValue, error){
-		scm.contributeCommitters, scm.contributeFilesAndLines,
+		scm.contributeCommitters,
+	}
+
+	if scm.isRequest {
+		// calculate modified lines for pull/merge requests
+		contributions = append(contributions, scm.contributeFilesAndLines)
 	}
 
 	for _, contribution := range contributions {
