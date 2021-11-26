@@ -15,7 +15,7 @@ import (
 type GitScm struct {
 	baseRef        string
 	headSha        string
-	isRequest      bool // if the tool is evaluating a pull/merge request or a branch
+	changeRequest  bool // if the tool is evaluating a change request or a branch
 	provider       string
 	repository     *git.Repository
 	repositoryPath string
@@ -33,11 +33,11 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
-	headSha, baseRef, gitProvider, request := checkGitProvider()
+	headSha, baseRef, gitProvider, changeRequest := checkGitProvider()
 
 	scm.headSha = headSha
 	scm.baseRef = baseRef
-	scm.isRequest = request
+	scm.changeRequest = changeRequest
 	scm.provider = gitProvider
 
 	return scm
@@ -142,7 +142,7 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 		scm.contributeCommitters,
 	}
 
-	if scm.isRequest {
+	if scm.changeRequest {
 		// calculate modified lines for pull/merge requests
 		contributions = append(contributions, scm.contributeFilesAndLines)
 	}

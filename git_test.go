@@ -190,7 +190,7 @@ func (r *FakeGitRepo) read() *GitScm {
 
 	scm.baseRef = master.Name
 	scm.headSha = currentBranch.Hash().String()
-	scm.isRequest = r.divergesFromBase
+	scm.changeRequest = r.divergesFromBase
 
 	return scm
 }
@@ -226,11 +226,11 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
 			defer cleanUpFn()
 
-			sha, baseRef, provider, request := checkGitProvider()
+			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, testSha, sha)
 			assert.Equal(t, testBaseRef, baseRef)
 			assert.Equal(t, "Github", provider)
-			assert.False(t, request)
+			assert.False(t, changeRequest)
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
@@ -239,11 +239,11 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
 			defer cleanUpFn()
 
-			sha, baseRef, provider, request := checkGitProvider()
+			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, testSha, sha)
 			assert.Equal(t, testBaseRef, baseRef)
 			assert.Equal(t, "Github", provider)
-			assert.True(t, request)
+			assert.True(t, changeRequest)
 		})
 	})
 
@@ -264,11 +264,11 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer cleanUpFn()
 
-			sha, baseRef, provider, request := checkGitProvider()
+			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "0123456", sha)
 			assert.Equal(t, "main", baseRef)
 			assert.Equal(t, "Gitlab", provider)
-			assert.False(t, request)
+			assert.False(t, changeRequest)
 		})
 
 		t.Run("Running for Merge Requests", func(t *testing.T) {
@@ -276,11 +276,11 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer cleanUpFn()
 
-			sha, baseRef, provider, request := checkGitProvider()
+			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "0123456", sha)
 			assert.Equal(t, "main", baseRef)
 			assert.Equal(t, "Gitlab", provider)
-			assert.True(t, request)
+			assert.True(t, changeRequest)
 		})
 	})
 
@@ -288,19 +288,19 @@ func TestCheckGitProvider(t *testing.T) {
 		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
 			os.Setenv("TARGET_BRANCH", "main")
 			defer os.Unsetenv("TARGET_BRANCH")
-			sha, baseRef, provider, request := checkGitProvider()
+			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "", sha)
 			assert.Equal(t, "main", baseRef)
 			assert.Equal(t, "", provider)
-			assert.False(t, request)
+			assert.False(t, changeRequest)
 		})
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
-			sha, baseRef, provider, request := checkGitProvider()
+			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "", sha)
 			assert.Equal(t, "", baseRef)
 			assert.Equal(t, "", provider)
-			assert.False(t, request)
+			assert.False(t, changeRequest)
 		})
 	})
 }
@@ -319,7 +319,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 
-	if scm.isRequest {
+	if scm.changeRequest {
 		// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
 		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
 		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
@@ -344,7 +344,7 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
 
-	if scm.isRequest {
+	if scm.changeRequest {
 		assert.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
 		assert.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
 		assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
