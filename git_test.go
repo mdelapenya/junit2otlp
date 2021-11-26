@@ -196,17 +196,40 @@ func (r *FakeGitRepo) read() *GitScm {
 }
 
 func TestCheckGitProvider(t *testing.T) {
+	// Prepare Github
+	originalSha := os.Getenv("GITHUB_SHA")
+	originalBaseRef := os.Getenv("GITHUB_BASE_REF")
+	originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
+	cleanGithubFn := func() {
+		os.Unsetenv("GITHUB_SHA")
+		os.Unsetenv("GITHUB_BASE_REF")
+		os.Unsetenv("GITHUB_HEAD_REF")
+	}
+	restoreGithubFn := func() {
+		os.Setenv("GITHUB_SHA", originalSha)
+		os.Setenv("GITHUB_BASE_REF", originalBaseRef)
+		os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
+	}
+
+	// prepare Gitlab
+	originalCommitBranch := os.Getenv("CI_COMMIT_BRANCH")
+	originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
+	originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+	restoreGitlabFn := func() {
+		os.Setenv("CI_COMMIT_BRANCH", originalCommitBranch)
+		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
+		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
+	}
+
 	t.Run("Github", func(t *testing.T) {
-		originalSha := os.Getenv("GITHUB_SHA")
-		originalBaseRef := os.Getenv("GITHUB_BASE_REF")
-		originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
+		testChangeRequest := false
 
 		testSha := "0123456"
 		if originalSha != "" {
 			testSha = originalSha
 		}
 
-		testBaseRef := "main"
+		testBaseRef := ""
 		if originalBaseRef != "" {
 			testBaseRef = originalBaseRef
 		}
@@ -216,53 +239,43 @@ func TestCheckGitProvider(t *testing.T) {
 			testHeadRef = originalHeadRef
 		}
 
-		cleanUpFn := func() {
-			os.Setenv("GITHUB_SHA", originalSha)
-			os.Setenv("GITHUB_BASE_REF", originalBaseRef)
-			os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
-		}
-
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
-			defer cleanUpFn()
+			if originalBaseRef != "" || originalHeadRef != "" {
+				testChangeRequest = true
+			}
+			defer restoreGithubFn()
 
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, testSha, sha)
 			assert.Equal(t, testBaseRef, baseRef)
 			assert.Equal(t, "Github", provider)
-			assert.False(t, changeRequest)
+			assert.Equal(t, testChangeRequest, changeRequest)
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
-			os.Setenv("GITHUB_BASE_REF", testBaseRef)
+			os.Setenv("GITHUB_BASE_REF", "main")
 			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
-			defer cleanUpFn()
+			defer restoreGithubFn()
 
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, testSha, sha)
-			assert.Equal(t, testBaseRef, baseRef)
+			assert.Equal(t, "main", baseRef)
 			assert.Equal(t, "Github", provider)
 			assert.True(t, changeRequest)
 		})
 	})
 
 	t.Run("Gitlab", func(t *testing.T) {
-		originalCommitBranch := os.Getenv("CI_COMMIT_BRANCH")
-		originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
-		originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
-
-		cleanUpFn := func() {
-			os.Setenv("CI_COMMIT_BRANCH", originalCommitBranch)
-			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
-			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
-		}
+		cleanGithubFn()
 
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("CI_COMMIT_BRANCH", "branch")
 			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-			defer cleanUpFn()
+			defer restoreGitlabFn()
+			defer restoreGithubFn()
 
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "0123456", sha)
@@ -274,7 +287,8 @@ func TestCheckGitProvider(t *testing.T) {
 		t.Run("Running for Merge Requests", func(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-			defer cleanUpFn()
+			defer restoreGitlabFn()
+			defer restoreGithubFn()
 
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "0123456", sha)
