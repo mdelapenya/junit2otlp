@@ -52,9 +52,8 @@ For each test suite in the test execution, the tool will add the following attri
 | `test.systemout` | Log produced by Systemout |
 
 ### Ownership attributes
-These attributes are added to the traces and spans sent by the tool, identifying the owner (or owners) of the test suite, trying to correlate a test failure with an author or authors. To identify the owner, the tool will inspect the SCM repository for the project:
+These attributes are added to the traces and spans sent by the tool, identifying the owner (or owners) of the test suite, trying to correlate a test failure with an author or authors. To identify the owner, the tool will inspect the SCM repository for the project.
 
-- if it's a change request (pull request on Github, merge request on Gitlab), it will a
 #### SCM attributes
 Because the XML test report is evaluated for a project **in a SCM repository**, the tool will add the following attributes to each trace and span:
 
