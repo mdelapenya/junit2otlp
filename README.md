@@ -17,6 +17,67 @@ This tool is able to override the following attributes:
 
 For further reference on environment variables in the OpenTelemetry SDK, please read the [official specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/)
 
+## OpenTelemetry Attributes
+This tool is going to parse the XML report produced by jUnit, or any other tool converting to that format, adding different attributes, separated by different categories:
+
+- Test metrics attributes
+- Ownership attributes
+
+### Test metrics attributes
+These attributes are added as metrics.
+#### Test execution metrics
+For each test execution, represented by a test report file, the tool will add the following attributes to the metric document
+
+| Attribute | Description |
+| --------- | ----------- |
+| `tests.failed` | Number of failed tests in the test execution |
+| `tests.error` | Number of errored tests in the test execution |
+| `tests.passed` | Number of passed tests in the test execution |
+| `tests.skipped` | Number of skipped tests in the test execution |
+| `tests.duration` | Duration of the test execution |
+| `tests.systemerr` | Log produced by Systemerr |
+| `tests.systemout` | Log produced by Systemout |
+| `tests.total` | Total number of tests in the test execution |
+
+#### Test suite metrics
+For each test suite in the test execution, the tool will add the following attributes to the metric document:
+
+| Attribute | Description |
+| --------- | ----------- |
+| `test.classname` | Classname or file for the test suite |
+| `test.duration` | Duration of the test suite |
+| `test.message` | Message of the test suite |
+| `test.status` | Status of the test suite |
+| `test.systemerr` | Log produced by Systemerr |
+| `test.systemout` | Log produced by Systemout |
+
+### Ownership attributes
+These attributes are added to the traces and spans sent by the tool, identifying the owner (or owners) of the test suite, trying to correlate a test failure with an author or authors. To identify the owner, the tool will inspect the SCM repository for the project:
+
+- if it's a change request (pull request on Github, merge request on Gitlab), it will a
+#### SCM attributes
+Because the XML test report is evaluated for a project **in a SCM repository**, the tool will add the following attributes to each trace and span:
+
+| Attribute | Description |
+| --------- | ----------- |
+| `scm.authors` | Array of unique Email addresses for the authors of the commits |
+| `scm.branch` | Name of the branch where the test execution is processed |
+| `scm.committers` | Array of unique Email addresses for the committers of the commits |
+| `scm.provider` | Optional. If present, will include the name of the SCM provider, such as Github, Gitlab, Bitbucket, etc. |
+| `scm.repository` | Array of unique URLs representing the repository (i.e. https://github.com/mdelapenya/junit2otlp) |
+| `scm.type` | Type of the SCM (i.e. git, svn, mercurial)  At this moment the tool only supports Git repositories. |
+
+#### Change request attributes
+The tool will add the following attributes to each trace and span if and only if the XML test report is evaluated in the context of a change requests **for a Git repository**:
+
+| Attribute | Description |
+| --------- | ----------- |
+| `scm.git.additions` | Number of added lines in the changeset |
+| `scm.git.deletions` | Number of deleted lines in the changeset |
+| `scm.git.files.modified` | Number of modified files in the changeset |
+
+A changeset is calculated based on the HEAD commit and the first ancestor between HEAD and the branch where the changeset is submitted against.
+
 ## Demos
 To demonstrate how traces and metrics are sent to different back-ends, we are provising the following demos:
 
