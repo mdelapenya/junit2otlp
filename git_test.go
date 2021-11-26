@@ -222,6 +222,10 @@ func TestCheckGitProvider(t *testing.T) {
 	}
 
 	t.Run("Github", func(t *testing.T) {
+		if originalCommitBranch != "" {
+			t.Skip("Tests skipped when running on Gitlab")
+		}
+
 		testChangeRequest := false
 
 		testSha := "0123456"
@@ -268,6 +272,10 @@ func TestCheckGitProvider(t *testing.T) {
 	})
 
 	t.Run("Gitlab", func(t *testing.T) {
+		if originalSha != "" {
+			t.Skip("Tests skipped when running on Github")
+		}
+
 		cleanGithubFn()
 
 		t.Run("Running for Branches", func(t *testing.T) {
@@ -299,6 +307,10 @@ func TestCheckGitProvider(t *testing.T) {
 	})
 
 	t.Run("Local machine", func(t *testing.T) {
+		if originalSha != "" {
+			t.Skip("Tests skipped when running on Github")
+		}
+
 		cleanGithubFn()
 
 		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
