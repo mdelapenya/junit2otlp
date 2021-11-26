@@ -299,9 +299,13 @@ func TestCheckGitProvider(t *testing.T) {
 	})
 
 	t.Run("Local machine", func(t *testing.T) {
+		cleanGithubFn()
+
 		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
 			os.Setenv("TARGET_BRANCH", "main")
+			defer restoreGithubFn()
 			defer os.Unsetenv("TARGET_BRANCH")
+
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "", sha)
 			assert.Equal(t, "main", baseRef)
@@ -310,6 +314,8 @@ func TestCheckGitProvider(t *testing.T) {
 		})
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
+			defer restoreGithubFn()
+
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "", sha)
 			assert.Equal(t, "", baseRef)
