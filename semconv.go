@@ -5,6 +5,8 @@ const (
 
 	// git keys
 	GitAdditions     = "scm.git.additions"
+	GitCloneDepth    = "scm.git.clone.depth"
+	GitCloneShallow  = "scm.git.clone.shallow"
 	GitDeletions     = "scm.git.deletions"
 	GitModifiedFiles = "scm.git.files.modified"
 

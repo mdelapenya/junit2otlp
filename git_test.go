@@ -37,11 +37,23 @@ type FakeGitRepo struct {
 	t                *testing.T
 }
 
-func NewFakeGitRepo(t *testing.T) *FakeGitRepo {
-	cloneURL := "https://github.com/octocat/hello-world"
+type CloneOptionsRequest struct {
+	Depth int
+	URL   string
+}
+
+func WithCloneOptions(req CloneOptionsRequest) *git.CloneOptions {
+	if req.URL == "" {
+		req.URL = "https://github.com/octocat/hello-world"
+	}
+
+	return &git.CloneOptions{URL: req.URL, Depth: req.Depth}
+}
+
+func NewFakeGitRepo(t *testing.T, opts *git.CloneOptions) *FakeGitRepo {
 	tempDir = t.TempDir()
 
-	repo, err := git.PlainClone(tempDir, false, &git.CloneOptions{URL: cloneURL})
+	repo, err := git.PlainClone(tempDir, false, opts)
 	if err != nil {
 		fmt.Printf(">> could not initialise test repo")
 		return nil
@@ -337,11 +349,27 @@ func TestCheckGitProvider(t *testing.T) {
 	})
 }
 
+func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
+	os.Setenv("TARGET_BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
+	defer os.Unsetenv("TARGET_BRANCH")
+
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{Depth: 1})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	if scm == nil {
+		t.FailNow()
+	}
+
+	atts := scm.contributeAttributes()
+
+	// shallow clone depth is 3
+	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 3) }, "should be set as scm.git.clone.depth=3. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, true) }, "should be set as scm.git.clone.shallow=true. Attributes: %v", atts)
+}
+
 func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -358,6 +386,8 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 	}
 
+	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "HEAD") }, "should be set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
@@ -366,7 +396,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForBranches(t *testing.T) {
-	scm := NewFakeGitRepo(t).read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -382,6 +412,8 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 		assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
 	}
 
+	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "refs/heads/master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
@@ -393,7 +425,7 @@ func TestGit_ContributeCommitters(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "master")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -418,7 +450,7 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "master")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -445,7 +477,7 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 	os.Setenv("TARGET_BRANCH", "master")
 	defer os.Unsetenv("TARGET_BRANCH")
 
-	scm := NewFakeGitRepo(t).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -460,7 +492,7 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForBranches(t *testing.T) {
-	scm := NewFakeGitRepo(t).read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -477,6 +509,27 @@ func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			return true
+		}
+	}
+
+	return false
+}
+
+func keyExistsWithBoolValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...bool) bool {
+	for _, att := range attributes {
+		if string(att.Key) == key {
+			for _, v := range value {
+				val := att.Value.AsBoolSlice()
+				if len(val) == 0 {
+					return v == att.Value.AsBool()
+				}
+
+				for _, vv := range val {
+					if vv == v {
+						return true
+					}
+				}
+			}
 		}
 	}
 

@@ -121,6 +121,19 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 		gitAttributes = append(gitAttributes, attribute.Key(ScmProvider).String(scm.provider))
 	}
 
+	shallow, err := scm.repository.Storer.Shallow()
+	if err != nil {
+		return gitAttributes
+	}
+
+	if shallow == nil {
+		gitAttributes = append(gitAttributes, attribute.Key(GitCloneShallow).Bool(false))
+		gitAttributes = append(gitAttributes, attribute.Key(GitCloneDepth).Int(0))
+	} else {
+		gitAttributes = append(gitAttributes, attribute.Key(GitCloneShallow).Bool(len(shallow) != 0))
+		gitAttributes = append(gitAttributes, attribute.Key(GitCloneDepth).Int(len(shallow)))
+	}
+
 	origin, err := scm.repository.Remote("origin")
 	if err != nil {
 		return gitAttributes
