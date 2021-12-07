@@ -14,6 +14,7 @@ This tool is able to override the following attributes:
 | --------- | ---- | ------------- | ----------- |
 | Service Name | --service-name | `junit2otlp` | Overrides OpenTelemetry's service name. If the `OTEL_SERVICE_NAME` environment variable is set, it will take precedence over any other value. |
 | Service Version | --service-version | Empty | Overrides OpenTelemetry's service version. If the `OTEL_SERVICE_VERSION` environment variable is set, it will take precedence over any other value. |
+| Trace Name | --trace-name | `junit2otlp` | Overrides OpenTelemetry's trace name. |
 
 For further reference on environment variables in the OpenTelemetry SDK, please read the [official specification](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/)
 
@@ -76,6 +77,28 @@ The tool will add the following attributes to each trace and span if and only if
 | `scm.git.files.modified` | Number of modified files in the changeset |
 
 A changeset is calculated based on the HEAD commit and the first ancestor between HEAD and the branch where the changeset is submitted against.
+
+## Docker image
+It's possible to run the binary as a Docker image. To build and use the image
+
+1. First build the Docker image using this Make goal:
+```shell
+make build-docker-image
+```
+
+2. Then start the Elastic Stack back-end:
+```shell
+make demo-start-elastic
+```
+
+3. Finally, once the services are started, run:
+```
+cat TEST-sample3.xml | docker run --rm -i --network elastic_junit2otlp --env OTEL_EXPORTER_OTLP_ENDPOINT=http://apm-server:8200 mdelapenya/junit2otlp:latest --service-name DOCKERFOO --trace-name TRACEBAR
+```
+  - We are making the Docker container receive the pipe with the `-i` flag.
+  - We are attaching the container to the same Docker network where the services are running.
+  - We are passing an environment variable with the URL of the OpenTelemetry exporter endpoint, in this case an APM Server instance.
+  - We are passing command line flags to the container, setting the service name (_DOCKERFOO_) and the trace name (_TRACEBAR_).
 
 ## Demos
 To demonstrate how traces and metrics are sent to different back-ends, we are provising the following demos:
