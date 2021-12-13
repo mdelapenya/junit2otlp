@@ -24,6 +24,7 @@ const (
 	PassedTestsCount  = "tests.passed"
 	SkippedTestsCount = "tests.skipped"
 	TestsDuration     = "tests.duration"
+	TestsSuiteName    = "tests.suitename"
 	TestsSystemErr    = "tests.systemerr"
 	TestsSystemOut    = "tests.systemout"
 	TotalTestsCount   = "tests.total"

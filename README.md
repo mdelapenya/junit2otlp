@@ -36,6 +36,7 @@ For each test execution, represented by a test report file, the tool will add th
 | `tests.passed` | Number of passed tests in the test execution |
 | `tests.skipped` | Number of skipped tests in the test execution |
 | `tests.duration` | Duration of the test execution |
+| `tests.suitename` | Name of the test execution |
 | `tests.systemerr` | Log produced by Systemerr |
 | `tests.systemout` | Log produced by Systemout |
 | `tests.total` | Total number of tests in the test execution |

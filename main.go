@@ -78,7 +78,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 
 		suiteAttributes := []attribute.KeyValue{
 			semconv.CodeNamespaceKey.String(suite.Package),
-			attribute.Key("code.testsuite").String(suite.Name),
+			attribute.Key(TestsSuiteName).String(suite.Name),
 			attribute.Key(TestsSystemErr).String(suite.SystemErr),
 			attribute.Key(TestsSystemOut).String(suite.SystemOut),
 			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
