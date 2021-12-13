@@ -59,7 +59,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 
 	scm := GetScm()
 	if scm != nil {
-		scmAttributes := scm.contributeOtelAttributes()
+		scmAttributes := scm.contributeAttributes()
 		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
 	}
 
@@ -78,7 +78,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 
 		suiteAttributes := []attribute.KeyValue{
 			semconv.CodeNamespaceKey.String(suite.Package),
-			attribute.Key("code.testsuite").String(suite.Name),
+			attribute.Key(TestsSuiteName).String(suite.Name),
 			attribute.Key(TestsSystemErr).String(suite.SystemErr),
 			attribute.Key(TestsSystemOut).String(suite.SystemOut),
 			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
@@ -111,7 +111,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 			testAttributes = append(testAttributes, suiteAttributes...)
 
 			if test.Error != nil {
-				testAttributes = append(testAttributes, attribute.Key("tests.error").String(test.Error.Error()))
+				testAttributes = append(testAttributes, attribute.Key(TestError).String(test.Error.Error()))
 			}
 
 			_, testSpan := tracer.Start(ctx, test.Name,

@@ -3,12 +3,10 @@ package main
 import (
 	"os"
 	"path"
-
-	"go.opentelemetry.io/otel/attribute"
 )
 
 type Scm interface {
-	contributeOtelAttributes() []attribute.KeyValue
+	OTELAttributesContributor
 }
 
 // GetScm checks if the underlying filesystem repository is a Git repository
@@ -26,7 +24,5 @@ func GetScm() Scm {
 	}
 
 	// .git exists
-	return &GitScm{
-		repositoryPath: workingDir,
-	}
+	return NewGitScm(workingDir)
 }
