@@ -111,7 +111,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 			testAttributes = append(testAttributes, suiteAttributes...)
 
 			if test.Error != nil {
-				testAttributes = append(testAttributes, attribute.Key("tests.error").String(test.Error.Error()))
+				testAttributes = append(testAttributes, attribute.Key(TestError).String(test.Error.Error()))
 			}
 
 			_, testSpan := tracer.Start(ctx, test.Name,

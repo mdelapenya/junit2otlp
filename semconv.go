@@ -31,6 +31,7 @@ const (
 	// test keys
 	TestClassName = "test.classname"
 	TestDuration  = "test.duration"
+	TestError     = "test.error"
 	TestMessage   = "test.message"
 	TestStatus    = "test.status"
 	TestSystemErr = "test.systemerr"

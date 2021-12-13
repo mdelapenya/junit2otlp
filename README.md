@@ -47,6 +47,7 @@ For each test suite in the test execution, the tool will add the following attri
 | --------- | ----------- |
 | `test.classname` | Classname or file for the test suite |
 | `test.duration` | Duration of the test suite |
+| `test.error` | Error message of the test suite |
 | `test.message` | Message of the test suite |
 | `test.status` | Status of the test suite |
 | `test.systemerr` | Log produced by Systemerr |
