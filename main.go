@@ -70,7 +70,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
 	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
 
-	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...))
+	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...), trace.WithSpanKind(trace.SpanKindServer))
 	defer outerSpan.End()
 
 	for _, suite := range suites {
