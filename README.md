@@ -75,6 +75,8 @@ The tool will add the following attributes to each trace and span if and only if
 | --------- | ----------- |
 | `scm.git.additions` | Number of added lines in the changeset |
 | `scm.git.deletions` | Number of deleted lines in the changeset |
+| `scm.git.clone.depth` | Depth of the git clone |
+| `scm.git.clone.shallow` | Whethere the git clone was shallow or not |
 | `scm.git.files.modified` | Number of modified files in the changeset |
 
 A changeset is calculated based on the HEAD commit and the first ancestor between HEAD and the branch where the changeset is submitted against.
