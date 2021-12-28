@@ -24,10 +24,11 @@ This tool is going to parse the XML report produced by jUnit, or any other tool 
 - Test metrics attributes
 - Ownership attributes
 
-### Test metrics attributes
-These attributes are added as metrics.
-#### Test execution metrics
-For each test execution, represented by a test report file, the tool will add the following attributes to the metric document
+### Metrics and Traces
+The following attributes are added as metrics and/or traces.
+
+#### Test execution attributes
+For each test execution, represented by a test report file, the tool will add the following attributes to the metric document, including them in the trace representing the test execution.
 
 | Attribute | Description |
 | --------- | ----------- |
@@ -41,16 +42,16 @@ For each test execution, represented by a test report file, the tool will add th
 | `tests.systemout` | Log produced by Systemout |
 | `tests.total` | Total number of tests in the test execution |
 
-#### Test suite metrics
-For each test suite in the test execution, the tool will add the following attributes to the metric document:
+#### Test case attributes
+For each test case in the test execution, the tool will add the following attributes to the span document representing the test case:
 
 | Attribute | Description |
 | --------- | ----------- |
-| `test.classname` | Classname or file for the test suite |
-| `test.duration` | Duration of the test suite |
-| `test.error` | Error message of the test suite |
-| `test.message` | Message of the test suite |
-| `test.status` | Status of the test suite |
+| `test.classname` | Classname or file for the test case |
+| `test.duration` | Duration of the test case |
+| `test.error` | Error message of the test case |
+| `test.message` | Message of the test case |
+| `test.status` | Status of the test case |
 | `test.systemerr` | Log produced by Systemerr |
 | `test.systemout` | Log produced by Systemout |
 
