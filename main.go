@@ -231,7 +231,7 @@ func Main(ctx context.Context, reader InputReader) error {
 		semconv.ServiceNameKey.String(otlpSrvName),
 		semconv.ServiceVersionKey.String(otlpSrvVersion),
 	)
-	res, err := resource.New(ctx, resAttrs)
+	res, err := resource.New(ctx, resource.WithProcess(), resAttrs)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenTelemetry service name resource: %s", err)
 	}
