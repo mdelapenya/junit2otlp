@@ -228,11 +228,13 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	spans := instrumentationLibrarySpans.Spans
 
+	expectedSpansCount := 15
+
 	// there are 15 elements:
 	//   1 testsuites element (root element)
 	// 	 3 testsuite element
 	// 	 11 testcase elements
-	assert.Equal(t, 15, len(spans))
+	assert.Equal(t, expectedSpansCount, len(spans))
 
 	aTestCase := spans[2]
 	assert.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
@@ -246,6 +248,10 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	goVersion, _ := findAttributeInArray(aTestCase.Attributes, "go.version")
 	assertStringValueInAttribute(t, goVersion.Value, "go1.16.3 linux/amd64")
+
+	// last span is server type
+	aTestCase = spans[expectedSpansCount-1]
+	assert.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
 }
 
 func Test_GetServiceVariable(t *testing.T) {
