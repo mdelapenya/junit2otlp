@@ -228,12 +228,12 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	spans := instrumentationLibrarySpans.Spans
 
-	expectedSpansCount := 15
-
 	// there are 15 elements:
 	//   1 testsuites element (root element)
 	// 	 3 testsuite element
 	// 	 11 testcase elements
+	expectedSpansCount := 15
+
 	assert.Equal(t, expectedSpansCount, len(spans))
 
 	aTestCase := spans[2]
