@@ -214,11 +214,11 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	resourceSpans := tracesReport.ResourceSpans[0]
 
-	srvNameAttribute := resourceSpans.Resource.Attributes[0]
+	srvNameAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
 	assert.Equal(t, "service.name", srvNameAttribute.Key)
 	assertStringValueInAttribute(t, srvNameAttribute.Value, "jaeger-srv-test")
 
-	srvVersionAttribute := resourceSpans.Resource.Attributes[1]
+	srvVersionAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
 	assert.Equal(t, "service.version", srvVersionAttribute.Key)
 	assertStringValueInAttribute(t, srvVersionAttribute.Value, "")
 
