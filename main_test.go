@@ -201,7 +201,7 @@ func Test_Main_SampleXML(t *testing.T) {
 	}
 
 	// TODO: retry until the file is written by the otel-exporter
-	time.Sleep(time.Minute)
+	time.Sleep(time.Second * 30)
 
 	// assert using the generated file
 	jsonBytes, _ := ioutil.ReadFile(reportFilePath)
