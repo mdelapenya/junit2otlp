@@ -12,6 +12,7 @@ const (
 
 	// scm keys
 	ScmAuthors    = "scm.authors"
+	ScmBaseRef    = "scm.baseRef"
 	ScmBranch     = "scm.branch"
 	ScmCommitters = "scm.committers"
 	ScmProvider   = "scm.provider"
