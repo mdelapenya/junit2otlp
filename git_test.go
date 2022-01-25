@@ -388,7 +388,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 
 	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "main") }, "should be set as scm.baseRef. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "HEAD") }, "should be set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
@@ -415,7 +415,7 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 
 	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "main") }, "should be set as scm.baseRef. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "refs/heads/master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
