@@ -156,6 +156,10 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 
 	if scm.changeRequest {
+		if scm.baseRef != "" {
+			gitAttributes = append(gitAttributes, attribute.Key(ScmBaseRef).String(scm.baseRef))
+		}
+
 		// calculate modified lines for pull/merge requests
 		contributions = append(contributions, scm.contributeFilesAndLines)
 	}

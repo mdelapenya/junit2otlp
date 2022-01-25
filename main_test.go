@@ -201,7 +201,7 @@ func Test_Main_SampleXML(t *testing.T) {
 	}
 
 	// TODO: retry until the file is written by the otel-exporter
-	time.Sleep(time.Minute)
+	time.Sleep(time.Second * 30)
 
 	// assert using the generated file
 	jsonBytes, _ := ioutil.ReadFile(reportFilePath)
@@ -214,11 +214,11 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	resourceSpans := tracesReport.ResourceSpans[0]
 
-	srvNameAttribute := resourceSpans.Resource.Attributes[0]
+	srvNameAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
 	assert.Equal(t, "service.name", srvNameAttribute.Key)
 	assertStringValueInAttribute(t, srvNameAttribute.Value, "jaeger-srv-test")
 
-	srvVersionAttribute := resourceSpans.Resource.Attributes[1]
+	srvVersionAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
 	assert.Equal(t, "service.version", srvVersionAttribute.Key)
 	assertStringValueInAttribute(t, srvVersionAttribute.Value, "")
 
@@ -232,7 +232,9 @@ func Test_Main_SampleXML(t *testing.T) {
 	//   1 testsuites element (root element)
 	// 	 3 testsuite element
 	// 	 11 testcase elements
-	assert.Equal(t, 15, len(spans))
+	expectedSpansCount := 15
+
+	assert.Equal(t, expectedSpansCount, len(spans))
 
 	aTestCase := spans[2]
 	assert.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
@@ -246,6 +248,10 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	goVersion, _ := findAttributeInArray(aTestCase.Attributes, "go.version")
 	assertStringValueInAttribute(t, goVersion.Value, "go1.16.3 linux/amd64")
+
+	// last span is server type
+	aTestCase = spans[expectedSpansCount-1]
+	assert.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
 }
 
 func Test_GetServiceVariable(t *testing.T) {

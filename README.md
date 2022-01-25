@@ -64,6 +64,7 @@ Because the XML test report is evaluated for a project **in a SCM repository**, 
 | Attribute | Description |
 | --------- | ----------- |
 | `scm.authors` | Array of unique Email addresses for the authors of the commits |
+| `scm.baseRef` | Name of the target branch (Only for change requests) |
 | `scm.branch` | Name of the branch where the test execution is processed |
 | `scm.committers` | Array of unique Email addresses for the committers of the commits |
 | `scm.provider` | Optional. If present, will include the name of the SCM provider, such as Github, Gitlab, Bitbucket, etc. |

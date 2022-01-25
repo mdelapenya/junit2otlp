@@ -70,7 +70,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
 	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
 
-	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...))
+	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...), trace.WithSpanKind(trace.SpanKindServer))
 	defer outerSpan.End()
 
 	for _, suite := range suites {
@@ -231,7 +231,7 @@ func Main(ctx context.Context, reader InputReader) error {
 		semconv.ServiceNameKey.String(otlpSrvName),
 		semconv.ServiceVersionKey.String(otlpSrvVersion),
 	)
-	res, err := resource.New(ctx, resAttrs)
+	res, err := resource.New(ctx, resource.WithProcess(), resAttrs)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenTelemetry service name resource: %s", err)
 	}
