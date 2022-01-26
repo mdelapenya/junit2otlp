@@ -21,6 +21,9 @@ endef
 build-docker-image:
 	docker build -t mdelapenya/junit2otlp:latest .
 
+push-docker-image:
+	docker push mdelapenya/junit2otlp:latest
+
 demo-start-elastic:
 	$(call setup_demo_env,elastic)
 	$(call start_demo,elastic)

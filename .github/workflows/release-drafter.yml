@@ -16,3 +16,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Publish Docker image
+        run: |
+          echo ${{ secrets.DOCKER_PASSWORD }} | docker login --username mdelapenya --password-stdin
+          make build-docker-image
+          make push-docker-image
