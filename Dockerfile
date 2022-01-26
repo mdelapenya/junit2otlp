@@ -15,6 +15,7 @@ RUN GOOS=linux GOARCH=386 go build -ldflags="-w -s" -o /go/bin/junit2otlp
 # STEP 2 build a small image
 ############################
 FROM scratch
+ENV USER=junit2otlp
 # Copy default certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy our static executable.
