@@ -16,6 +16,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check out code
+        uses: actions/checkout@v2
+
       - name: Publish Docker image
         run: |
           echo ${{ secrets.DOCKER_PASSWORD }} | docker login --username mdelapenya --password-stdin
