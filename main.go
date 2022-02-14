@@ -261,7 +261,7 @@ func Main(ctx context.Context, reader InputReader) error {
 		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
 	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
+		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
 		defer cancel()
 		// pushes any last exports to the receiver
 		if err := pusher.Stop(ctx); err != nil {
