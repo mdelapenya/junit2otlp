@@ -226,6 +226,8 @@ func Main(ctx context.Context, reader InputReader) error {
 	otlpSrvName := getOtlpServiceName()
 	otlpSrvVersion := getOtlpServiceVersion()
 
+	ctx = initOtelContext(ctx)
+
 	// set the service name that will show up in tracing UIs
 	resAttrs := resource.WithAttributes(
 		semconv.ServiceNameKey.String(otlpSrvName),
