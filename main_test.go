@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,54 +40,89 @@ func (tr *TestReader) Read() ([]byte, error) {
 	return b, nil
 }
 
-type TestTraceAttributeValue struct {
+type TestAttributeValue struct {
 	IntValue    string `json:"intValue"`
 	StringValue string `json:"stringValue"`
 }
 
-type TestTraceAttribute struct {
-	Key   string                  `json:"key"`
-	Value TestTraceAttributeValue `json:"value,omitempty"`
+type TestAttribute struct {
+	Key   string             `json:"key"`
+	Value TestAttributeValue `json:"value,omitempty"`
 }
 
-// TestTraceReport holds references to the File exporter defined by the otel-collector
-type TestTraceReport struct {
-	ResourceSpans []struct {
-		Resource struct {
-			Attributes []TestTraceAttribute `json:"attributes"`
-		} `json:"resource"`
-		InstrumentationLibrarySpans []struct {
-			InstrumentationLibrary struct {
-				Name string `json:"name"`
-			} `json:"instrumentationLibrary"`
-			Spans []struct {
-				TraceID           string               `json:"traceId"`
-				SpanID            string               `json:"spanId"`
-				ParentSpanID      string               `json:"parentSpanId"`
-				Name              string               `json:"name"`
-				Kind              string               `json:"kind"`
-				StartTimeUnixNano string               `json:"startTimeUnixNano"`
-				EndTimeUnixNano   string               `json:"endTimeUnixNano"`
-				Attributes        []TestTraceAttribute `json:"attributes"`
-				Status            struct {
-				} `json:"status"`
-			} `json:"spans"`
-		} `json:"instrumentationLibrarySpans"`
-	} `json:"resourceSpans"`
+type ResourceSpans struct {
+	Spans []ResourceSpan `json:"resourceSpans"`
+}
+type ResourceSpan struct {
+	Resource struct {
+		Attributes []TestAttribute `json:"attributes"`
+	} `json:"resource"`
+	InstrumentationLibrarySpans []struct {
+		InstrumentationLibrary struct {
+			Name string `json:"name"`
+		} `json:"instrumentationLibrary"`
+		Spans []struct {
+			TraceID           string          `json:"traceId"`
+			SpanID            string          `json:"spanId"`
+			ParentSpanID      string          `json:"parentSpanId"`
+			Name              string          `json:"name"`
+			Kind              string          `json:"kind"`
+			StartTimeUnixNano string          `json:"startTimeUnixNano"`
+			EndTimeUnixNano   string          `json:"endTimeUnixNano"`
+			Attributes        []TestAttribute `json:"attributes"`
+			Status            struct {
+			} `json:"status"`
+		} `json:"spans"`
+	} `json:"instrumentationLibrarySpans"`
 }
 
-func assertStringValueInAttribute(t *testing.T, att TestTraceAttributeValue, expected string) {
+type ResourceMetrics struct {
+	Metrics []ResourceMetric `json:"resourceMetrics"`
+}
+type ResourceMetric struct {
+	Resource struct {
+		Attributes []TestAttribute `json:"attributes"`
+	} `json:"resource"`
+	InstrumentationLibraryMetrics []struct {
+		InstrumentationLibrary struct {
+			Name string `json:"name"`
+		} `json:"instrumentationLibrary"`
+		Metrics []struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			Sum         struct {
+				DataPoints []struct {
+					Attributes        []TestAttribute `json:"attributes"`
+					StartTimeUnixNano string          `json:"startTimeUnixNano"`
+					TimeUnixNano      string          `json:"timeUnixNano"`
+					AsInt             string          `json:"asInt"`
+				} `json:"dataPoints"`
+				AggregationTemporality string `json:"aggregationTemporality"`
+				IsMonotonic            bool   `json:"isMonotonic"`
+			} `json:"sum"`
+		} `json:"metrics"`
+	} `json:"instrumentationLibraryMetrics"`
+	SchemaURL string `json:"schemaUrl"`
+}
+
+// TestReport holds references to the File exporter defined by the otel-collector
+type TestReport struct {
+	resourceSpans   ResourceSpans
+	resourceMetrics ResourceMetrics
+}
+
+func assertStringValueInAttribute(t *testing.T, att TestAttributeValue, expected string) {
 	assert.Equal(t, expected, att.StringValue)
 }
 
-func findAttributeInArray(attributes []TestTraceAttribute, key string) (TestTraceAttribute, error) {
+func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute, error) {
 	for _, att := range attributes {
 		if att.Key == key {
 			return att, nil
 		}
 	}
 
-	return TestTraceAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
+	return TestAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
 }
 
 func Test_Main_SampleXML(t *testing.T) {
@@ -206,13 +242,33 @@ func Test_Main_SampleXML(t *testing.T) {
 	// assert using the generated file
 	jsonBytes, _ := ioutil.ReadFile(reportFilePath)
 
-	var tracesReport TestTraceReport
-	err = json.Unmarshal(jsonBytes, &tracesReport)
+	// merge both JSON files
+	// 1. get the spans and metrics JSONs, they are separated by \n
+	// 2. remote white spaces
+	// 3. unmarshal each resource separately
+	// 4. assign each resource to the test report struct
+	content := string(jsonBytes)
+	jsons := strings.Split(content, "\n")
+	jsonSpans := strings.TrimSpace(jsons[0])
+	jsonMetrics := strings.TrimSpace(jsons[1])
+
+	var resSpans ResourceSpans
+	err = json.Unmarshal([]byte(jsonSpans), &resSpans)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	var resMetrics ResourceMetrics
+	err = json.Unmarshal([]byte(jsonMetrics), &resMetrics)
 	if err != nil {
 		t.Error(err.Error())
 	}
 
-	resourceSpans := tracesReport.ResourceSpans[0]
+	testReport := TestReport{
+		resourceSpans:   resSpans,
+		resourceMetrics: resMetrics,
+	}
+
+	resourceSpans := testReport.resourceSpans.Spans[0]
 
 	srvNameAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
 	assert.Equal(t, "service.name", srvNameAttribute.Key)
