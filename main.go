@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var repositoryPathFlag string
 var serviceNameFlag string
 var serviceVersionFlag string
 var traceNameFlag string
@@ -34,6 +35,12 @@ var traceNameFlag string
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		workingDir = "."
+	}
+
+	flag.StringVar(&repositoryPathFlag, "repository-path", workingDir, "Path to the SCM repository to be read")
 	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
@@ -57,7 +64,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	tracer := tracesProvides.Tracer(srvName)
 	meter := global.Meter(srvName)
 
-	scm := GetScm()
+	scm := GetScm(repositoryPathFlag)
 	if scm != nil {
 		scmAttributes := scm.contributeAttributes()
 		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
