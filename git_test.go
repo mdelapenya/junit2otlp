@@ -283,6 +283,55 @@ func TestCheckGitProvider(t *testing.T) {
 		})
 	})
 
+	t.Run("Jenkins", func(t *testing.T) {
+		// prepare Jenkins
+		jenkinsChangeID := os.Getenv("CHANGE_ID")
+		jenkinsGitCommit := os.Getenv("GIT_COMMIT")
+		jenkinsChangeBranchName := os.Getenv("BRANCH_NAME")
+		jenkinsChangeTargetName := os.Getenv("CHANGE_TARGET")
+		jenkinsURL := os.Getenv("JENKINS_URL")
+		restoreJenkinsFn := func() {
+			os.Setenv("CHANGE_ID", jenkinsChangeID)
+			os.Setenv("GIT_COMMIT", jenkinsGitCommit)
+			os.Setenv("BRANCH_NAME", jenkinsChangeBranchName)
+			os.Setenv("CHANGE_TARGET", jenkinsChangeTargetName)
+			os.Setenv("JENKINS_URL", jenkinsURL)
+		}
+
+		testSha := "0123456"
+		testBranch := "mybranch"
+
+		t.Run("Running for Branches", func(t *testing.T) {
+			os.Setenv("JENKINS_URL", "http://jenkins.local")
+			os.Setenv("GIT_COMMIT", testSha)
+			os.Setenv("CHANGE_ID", "")
+			os.Setenv("CHANGE_TARGET", "")
+			os.Setenv("BRANCH_NAME", testBranch)
+			defer restoreJenkinsFn()
+
+			sha, baseRef, provider, changeRequest := checkGitProvider()
+			assert.Equal(t, testSha, sha)
+			assert.Equal(t, testBranch, baseRef)
+			assert.Equal(t, "Jenkins", provider)
+			assert.False(t, changeRequest)
+		})
+
+		t.Run("Running for Pull Requests", func(t *testing.T) {
+			os.Setenv("JENKINS_URL", "http://jenkins.local")
+			os.Setenv("GIT_COMMIT", testSha)
+			os.Setenv("CHANGE_ID", "PR-123")
+			os.Setenv("CHANGE_TARGET", "main")
+			os.Setenv("BRANCH_NAME", testBranch)
+			defer restoreJenkinsFn()
+
+			sha, baseRef, provider, changeRequest := checkGitProvider()
+			assert.Equal(t, testSha, sha)
+			assert.Equal(t, "main", baseRef)
+			assert.Equal(t, "Jenkins", provider)
+			assert.True(t, changeRequest)
+		})
+	})
+
 	t.Run("Gitlab", func(t *testing.T) {
 		if originalSha != "" {
 			t.Skip("Tests skipped when running on Github")

@@ -96,6 +96,19 @@ func checkGitProvider() (string, string, string, bool) {
 		return sha, "", "Github", false
 	}
 
+	// is Jenkins?
+	if os.Getenv("JENKINS_URL") != "" {
+		isPR := os.Getenv("CHANGE_ID") != "" // only present on multibranch pipelines on Jenkins
+		headRef := os.Getenv("BRANCH_NAME")  // only present on multibranch pipelines on Jenkins
+		sha = os.Getenv("GIT_COMMIT")        // only present on multibranch pipelines on Jenkins
+		baseRef = os.Getenv("CHANGE_TARGET") // only present on multibranch pipelines on Jenkins
+		if sha != "" && baseRef != "" {
+			return sha, headRef, "Jenkins", isPR
+		} else {
+			return sha, headRef, "Jenkins", isPR
+		}
+	}
+
 	// is Gitlab?
 	commitBranch := os.Getenv("CI_COMMIT_BRANCH")              // only present on branches on Gitlab CI
 	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")      // only present on merge requests on Gitlab CI
