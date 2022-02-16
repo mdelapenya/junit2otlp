@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,12 +8,7 @@ import (
 
 func TestGetScm(t *testing.T) {
 	t.Run("This project uses Git", func(t *testing.T) {
-		workingDir, err := os.Getwd()
-		if err != nil {
-			workingDir = "."
-		}
-
-		scm := GetScm(workingDir)
+		scm := GetScm(getDefaultwd())
 		switch scm.(type) {
 		case *GitScm:
 			// NOOP

@@ -35,12 +35,7 @@ var traceNameFlag string
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		workingDir = "."
-	}
-
-	flag.StringVar(&repositoryPathFlag, "repository-path", workingDir, "Path to the SCM repository to be read")
+	flag.StringVar(&repositoryPathFlag, "repository-path", getDefaultwd(), "Path to the SCM repository to be read")
 	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
@@ -130,6 +125,16 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	}
 
 	return nil
+}
+
+// getDefaultwd retrieves the current working dir, using '.' in the case an error occurs
+func getDefaultwd() string {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+
+	return workingDir
 }
 
 // getOtlpEnvVar checks if the env variable, removing the OTEL prefix, needs to override
