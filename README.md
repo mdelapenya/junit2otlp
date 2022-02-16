@@ -12,6 +12,7 @@ This tool is able to override the following attributes:
 
 | Attribute | Flag | Default value | Description |
 | --------- | ---- | ------------- | ----------- |
+| Repository Path | --repository-path | `.` | Path to the SCM repository to be read. |
 | Service Name | --service-name | `junit2otlp` | Overrides OpenTelemetry's service name. If the `OTEL_SERVICE_NAME` environment variable is set, it will take precedence over any other value. |
 | Service Version | --service-version | Empty | Overrides OpenTelemetry's service version. If the `OTEL_SERVICE_VERSION` environment variable is set, it will take precedence over any other value. |
 | Trace Name | --trace-name | `junit2otlp` | Overrides OpenTelemetry's trace name. |
@@ -101,7 +102,7 @@ make demo-start-elastic
 
 3. Finally, once the services are started, run:
 ```
-cat TEST-sample3.xml | docker run --rm -i --network elastic_junit2otlp --env OTEL_EXPORTER_OTLP_ENDPOINT=http://apm-server:8200 mdelapenya/junit2otlp:latest --service-name DOCKERFOO --trace-name TRACEBAR
+cat TEST-sample3.xml | docker run --rm -i --network elastic_junit2otlp --volume "$(pwd):/opt/projectname" --env OTEL_EXPORTER_OTLP_ENDPOINT=http://apm-server:8200 mdelapenya/junit2otlp:latest --service-name DOCKERFOO --trace-name TRACEBAR --repository-path "/opt/projectname"
 ```
   - We are making the Docker container receive the pipe with the `-i` flag.
   - We are attaching the container to the same Docker network where the services are running.
