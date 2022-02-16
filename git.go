@@ -93,7 +93,7 @@ func checkGitProvider() (string, string, string, bool) {
 			return githubContext.Commit, githubContext.TargetBranch, githubContext.Provider, githubContext.ChangeRequest
 		}
 
-		return githubContext.Commit, "", githubContext.Provider, githubContext.ChangeRequest
+		return githubContext.Commit, githubContext.Branch, githubContext.Provider, githubContext.ChangeRequest
 	}
 
 	// is Jenkins?
