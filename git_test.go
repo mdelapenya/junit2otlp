@@ -225,10 +225,12 @@ func TestCheckGitProvider(t *testing.T) {
 
 	// prepare Gitlab
 	originalCommitBranch := os.Getenv("CI_COMMIT_BRANCH")
+	gitlabRefName := os.Getenv("CI_COMMIT_REF_NAME")
 	originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
 	originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
 	restoreGitlabFn := func() {
 		os.Setenv("CI_COMMIT_BRANCH", originalCommitBranch)
+		os.Setenv("CI_COMMIT_REF_NAME", gitlabRefName)
 		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
 		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
 	}
@@ -341,6 +343,7 @@ func TestCheckGitProvider(t *testing.T) {
 
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("CI_COMMIT_BRANCH", "branch")
+			os.Setenv("CI_COMMIT_REF_NAME", "branch")
 			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer restoreGitlabFn()
@@ -348,12 +351,13 @@ func TestCheckGitProvider(t *testing.T) {
 
 			sha, baseRef, provider, changeRequest := checkGitProvider()
 			assert.Equal(t, "0123456", sha)
-			assert.Equal(t, "main", baseRef)
+			assert.Equal(t, "branch", baseRef)
 			assert.Equal(t, "Gitlab", provider)
 			assert.False(t, changeRequest)
 		})
 
 		t.Run("Running for Merge Requests", func(t *testing.T) {
+			os.Setenv("CI_COMMIT_REF_NAME", "branch")
 			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer restoreGitlabFn()

@@ -87,13 +87,13 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 // look up this tool-specific variable for the target branch.
 func checkGitProvider() (string, string, string, bool) {
 	// is Github?
-	sha := os.Getenv("GITHUB_SHA")
-	baseRef := os.Getenv("GITHUB_BASE_REF") // only present for pull requests on Github Actions
-	headRef := os.Getenv("GITHUB_HEAD_REF") // only present for pull requests on Github Actions
-	if sha != "" && baseRef != "" && headRef != "" {
-		return sha, baseRef, "Github", true
-	} else if sha != "" {
-		return sha, "", "Github", false
+	githubContext := FromGithub()
+	if githubContext != nil {
+		if githubContext.ChangeRequest {
+			return githubContext.Commit, githubContext.TargetBranch, githubContext.Provider, githubContext.ChangeRequest
+		}
+
+		return githubContext.Commit, "", githubContext.Provider, githubContext.ChangeRequest
 	}
 
 	// is Jenkins?
@@ -107,15 +107,17 @@ func checkGitProvider() (string, string, string, bool) {
 	}
 
 	// is Gitlab?
-	commitBranch := os.Getenv("CI_COMMIT_BRANCH")              // only present on branches on Gitlab CI
-	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")      // only present on merge requests on Gitlab CI
-	baseRef = os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME") // only present on merge requests on Gitlab CI
-	if sha != "" && baseRef != "" {
-		return sha, baseRef, "Gitlab", commitBranch == ""
+	gitlabContext := FromGitlab()
+	if gitlabContext != nil {
+		if gitlabContext.ChangeRequest {
+			return gitlabContext.Commit, gitlabContext.TargetBranch, gitlabContext.Provider, gitlabContext.ChangeRequest
+		}
+
+		return gitlabContext.Commit, gitlabContext.Branch, gitlabContext.Provider, gitlabContext.ChangeRequest
 	}
 
 	// in local branches, we are not in pull/merge requests
-	baseRef = os.Getenv("TARGET_BRANCH")
+	baseRef := os.Getenv("TARGET_BRANCH")
 	return "", baseRef, "", false
 }
 

@@ -17,6 +17,48 @@ type ScmContext struct {
 	TargetBranch  string
 }
 
+func FromGithub() *ScmContext {
+	if os.Getenv("GITHUB_SHA") == "" {
+		return nil
+	}
+
+	sha := os.Getenv("GITHUB_SHA")
+	branchName := os.Getenv("GITHUB_REF_NAME")
+	baseRef := os.Getenv("GITHUB_BASE_REF") // only present for pull requests on Github Actions
+	headRef := os.Getenv("GITHUB_HEAD_REF") // only present for pull requests on Github Actions
+
+	isChangeRequest := (baseRef != "" && headRef != "")
+
+	return &ScmContext{
+		ChangeRequest: isChangeRequest,
+		Commit:        sha,
+		Branch:        branchName,
+		Provider:      "Github",
+		TargetBranch:  baseRef,
+	}
+}
+
+func FromGitlab() *ScmContext {
+	if os.Getenv("CI_COMMIT_REF_NAME") == "" {
+		return nil
+	}
+
+	sha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")      // only present on merge requests on Gitlab CI
+	commitBranch := os.Getenv("CI_COMMIT_BRANCH")               // only present on branches on Gitlab CI
+	headRef := os.Getenv("CI_COMMIT_REF_NAME")                  // only present on branches on Gitlab CI
+	baseRef := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME") // only present on merge requests on Gitlab CI
+
+	isChangeRequest := (commitBranch == "")
+
+	return &ScmContext{
+		ChangeRequest: isChangeRequest,
+		Commit:        sha,
+		Branch:        headRef,
+		Provider:      "Gitlab",
+		TargetBranch:  baseRef,
+	}
+}
+
 func FromJenkins() *ScmContext {
 	if os.Getenv("JENKINS_URL") == "" {
 		return nil
