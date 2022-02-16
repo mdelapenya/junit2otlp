@@ -89,31 +89,19 @@ func checkGitProvider() (string, string, string, bool) {
 	// is Github?
 	githubContext := FromGithub()
 	if githubContext != nil {
-		if githubContext.ChangeRequest {
-			return githubContext.Commit, githubContext.TargetBranch, githubContext.Provider, githubContext.ChangeRequest
-		}
-
-		return githubContext.Commit, githubContext.Branch, githubContext.Provider, githubContext.ChangeRequest
+		return githubContext.Commit, githubContext.GetTargetBranch(), githubContext.Provider, githubContext.ChangeRequest
 	}
 
 	// is Jenkins?
 	jenkinsContext := FromJenkins()
 	if jenkinsContext != nil {
-		if jenkinsContext.ChangeRequest {
-			return jenkinsContext.Commit, jenkinsContext.TargetBranch, jenkinsContext.Provider, jenkinsContext.ChangeRequest
-		}
-
-		return jenkinsContext.Commit, jenkinsContext.Branch, jenkinsContext.Provider, jenkinsContext.ChangeRequest
+		return jenkinsContext.Commit, jenkinsContext.GetTargetBranch(), jenkinsContext.Provider, jenkinsContext.ChangeRequest
 	}
 
 	// is Gitlab?
 	gitlabContext := FromGitlab()
 	if gitlabContext != nil {
-		if gitlabContext.ChangeRequest {
-			return gitlabContext.Commit, gitlabContext.TargetBranch, gitlabContext.Provider, gitlabContext.ChangeRequest
-		}
-
-		return gitlabContext.Commit, gitlabContext.Branch, gitlabContext.Provider, gitlabContext.ChangeRequest
+		return gitlabContext.Commit, gitlabContext.GetTargetBranch(), gitlabContext.Provider, gitlabContext.ChangeRequest
 	}
 
 	// in local branches, we are not in pull/merge requests

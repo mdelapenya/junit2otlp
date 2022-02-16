@@ -17,6 +17,14 @@ type ScmContext struct {
 	TargetBranch  string
 }
 
+func (ctx *ScmContext) GetTargetBranch() string {
+	if ctx.ChangeRequest {
+		return ctx.TargetBranch
+	}
+
+	return ctx.Branch
+}
+
 func FromGithub() *ScmContext {
 	if os.Getenv("GITHUB_SHA") == "" {
 		return nil

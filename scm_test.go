@@ -23,3 +23,25 @@ func TestGetScm(t *testing.T) {
 		assert.Nil(t, scm, "The directory should not contain a .git directory")
 	})
 }
+
+func TestGetTargetBranch(t *testing.T) {
+	t.Run("For change-requests it must return target branch", func(t *testing.T) {
+		ctx := &ScmContext{
+			ChangeRequest: true,
+			TargetBranch:  "target",
+			Branch:        "branch",
+		}
+
+		assert.Equal(t, "target", ctx.GetTargetBranch())
+	})
+
+	t.Run("For branches it must return branch", func(t *testing.T) {
+		ctx := &ScmContext{
+			ChangeRequest: false,
+			TargetBranch:  "target",
+			Branch:        "branch",
+		}
+
+		assert.Equal(t, "branch", ctx.GetTargetBranch())
+	})
+}
