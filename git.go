@@ -97,16 +97,13 @@ func checkGitProvider() (string, string, string, bool) {
 	}
 
 	// is Jenkins?
-	if os.Getenv("JENKINS_URL") != "" {
-		isPR := os.Getenv("CHANGE_ID") != "" // only present on multibranch pipelines on Jenkins
-		headRef := os.Getenv("BRANCH_NAME")  // only present on multibranch pipelines on Jenkins
-		sha = os.Getenv("GIT_COMMIT")        // only present on multibranch pipelines on Jenkins
-		baseRef = os.Getenv("CHANGE_TARGET") // only present on multibranch pipelines on Jenkins
-		if sha != "" && baseRef != "" {
-			return sha, headRef, "Jenkins", isPR
-		} else {
-			return sha, headRef, "Jenkins", isPR
+	jenkinsContext := FromJenkins()
+	if jenkinsContext != nil {
+		if jenkinsContext.ChangeRequest {
+			return jenkinsContext.Commit, jenkinsContext.TargetBranch, jenkinsContext.Provider, jenkinsContext.ChangeRequest
 		}
+
+		return jenkinsContext.Commit, jenkinsContext.Branch, jenkinsContext.Provider, jenkinsContext.ChangeRequest
 	}
 
 	// is Gitlab?
