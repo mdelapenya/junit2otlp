@@ -207,7 +207,7 @@ func (r *FakeGitRepo) read() *GitScm {
 	return scm
 }
 
-func TestCheckGitProvider(t *testing.T) {
+func TestCheckGitContext(t *testing.T) {
 	// Prepare Github
 	originalSha := os.Getenv("GITHUB_SHA")
 	originalBaseRef := os.Getenv("GITHUB_BASE_REF")
@@ -240,8 +240,6 @@ func TestCheckGitProvider(t *testing.T) {
 			t.Skip("Tests skipped when running on Gitlab")
 		}
 
-		testChangeRequest := false
-
 		testSha := "0123456"
 		if originalSha != "" {
 			testSha = originalSha
@@ -259,17 +257,14 @@ func TestCheckGitProvider(t *testing.T) {
 
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
-			if originalBaseRef != "" || originalHeadRef != "" {
-				testChangeRequest = true
-			}
 			defer restoreGithubFn()
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, testSha, sha)
-			assert.Equal(t, testBaseRef, branch)
-			assert.Equal(t, testBaseRef, baseRef)
-			assert.Equal(t, "Github", provider)
-			assert.Equal(t, testChangeRequest, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, testSha, gitCtx.Commit)
+			assert.Equal(t, testBaseRef, gitCtx.Branch)
+			assert.Equal(t, testBaseRef, gitCtx.GetTargetBranch())
+			assert.Equal(t, "Github", gitCtx.Provider)
+			assert.False(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
@@ -279,12 +274,12 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
 			defer restoreGithubFn()
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, testSha, sha)
-			assert.Equal(t, testHeadRef, branch)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "Github", provider)
-			assert.True(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, testSha, gitCtx.Commit)
+			assert.Equal(t, testHeadRef, gitCtx.Branch)
+			assert.Equal(t, "main", gitCtx.GetTargetBranch())
+			assert.Equal(t, "Github", gitCtx.Provider)
+			assert.True(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -314,12 +309,12 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("BRANCH_NAME", testBranch)
 			defer restoreJenkinsFn()
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, testSha, sha)
-			assert.Equal(t, testBranch, branch)
-			assert.Equal(t, testBranch, baseRef)
-			assert.Equal(t, "Jenkins", provider)
-			assert.False(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, testSha, gitCtx.Commit)
+			assert.Equal(t, testBranch, gitCtx.Branch)
+			assert.Equal(t, testBranch, gitCtx.GetTargetBranch())
+			assert.Equal(t, "Jenkins", gitCtx.Provider)
+			assert.False(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
@@ -330,12 +325,12 @@ func TestCheckGitProvider(t *testing.T) {
 			os.Setenv("BRANCH_NAME", testBranch)
 			defer restoreJenkinsFn()
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, testSha, sha)
-			assert.Equal(t, testBranch, branch)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "Jenkins", provider)
-			assert.True(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, testSha, gitCtx.Commit)
+			assert.Equal(t, testBranch, gitCtx.Branch)
+			assert.Equal(t, "main", gitCtx.GetTargetBranch())
+			assert.Equal(t, "Jenkins", gitCtx.Provider)
+			assert.True(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -354,12 +349,12 @@ func TestCheckGitProvider(t *testing.T) {
 			defer restoreGitlabFn()
 			defer restoreGithubFn()
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "0123456", sha)
-			assert.Equal(t, "branch", branch)
-			assert.Equal(t, "branch", baseRef)
-			assert.Equal(t, "Gitlab", provider)
-			assert.False(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, "0123456", gitCtx.Commit)
+			assert.Equal(t, "branch", gitCtx.Branch)
+			assert.Equal(t, "branch", gitCtx.GetTargetBranch())
+			assert.Equal(t, "Gitlab", gitCtx.Provider)
+			assert.False(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running for Merge Requests", func(t *testing.T) {
@@ -369,12 +364,12 @@ func TestCheckGitProvider(t *testing.T) {
 			defer restoreGitlabFn()
 			defer restoreGithubFn()
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "0123456", sha)
-			assert.Equal(t, "branch", branch)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "Gitlab", provider)
-			assert.True(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, "0123456", gitCtx.Commit)
+			assert.Equal(t, "branch", gitCtx.Branch)
+			assert.Equal(t, "main", gitCtx.GetTargetBranch())
+			assert.Equal(t, "Gitlab", gitCtx.Provider)
+			assert.True(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -392,12 +387,12 @@ func TestCheckGitProvider(t *testing.T) {
 			defer os.Unsetenv("TARGET_BRANCH")
 			defer os.Unsetenv("BRANCH")
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "", sha)
-			assert.Equal(t, "foo", branch)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "", provider)
-			assert.True(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, "", gitCtx.Commit)
+			assert.Equal(t, "foo", gitCtx.Branch)
+			assert.Equal(t, "main", gitCtx.GetTargetBranch())
+			assert.Equal(t, "", gitCtx.Provider)
+			assert.True(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
@@ -405,12 +400,12 @@ func TestCheckGitProvider(t *testing.T) {
 			defer restoreGithubFn()
 			defer os.Unsetenv("BRANCH")
 
-			sha, branch, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "", sha)
-			assert.Equal(t, "foo", branch)
-			assert.Equal(t, "foo", baseRef)
-			assert.Equal(t, "", provider)
-			assert.False(t, changeRequest)
+			gitCtx := checkGiContext()
+			assert.Equal(t, "", gitCtx.Commit)
+			assert.Equal(t, "foo", gitCtx.Branch)
+			assert.Equal(t, "foo", gitCtx.GetTargetBranch())
+			assert.Equal(t, "", gitCtx.Provider)
+			assert.False(t, gitCtx.ChangeRequest)
 		})
 	})
 }

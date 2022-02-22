@@ -35,13 +35,13 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
-	headSha, branch, baseRef, gitProvider, changeRequest := checkGitProvider()
+	gitCtx := checkGiContext()
 
-	scm.headSha = headSha
-	scm.branchName = branch
-	scm.baseRef = baseRef
-	scm.changeRequest = changeRequest
-	scm.provider = gitProvider
+	scm.headSha = gitCtx.Commit
+	scm.branchName = gitCtx.Branch
+	scm.baseRef = gitCtx.GetTargetBranch()
+	scm.changeRequest = gitCtx.ChangeRequest
+	scm.provider = gitCtx.Provider
 
 	return scm
 }
@@ -85,35 +85,41 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 	return headCommit, targetCommit, nil
 }
 
-// checkGitProvider identies the head sha and target branch from the environment variables that are
+// checkGiContext identifies the head sha and target branch from the environment variables that are
 // populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
 // look up this tool-specific variable for the target branch.
-func checkGitProvider() (string, string, string, string, bool) {
+func checkGiContext() *ScmContext {
 	// is Github?
 	githubContext := FromGithub()
 	if githubContext != nil {
-		return githubContext.Commit, githubContext.Branch, githubContext.GetTargetBranch(), githubContext.Provider, githubContext.ChangeRequest
+		return githubContext
 	}
 
 	// is Jenkins?
 	jenkinsContext := FromJenkins()
 	if jenkinsContext != nil {
-		return jenkinsContext.Commit, jenkinsContext.Branch, jenkinsContext.GetTargetBranch(), jenkinsContext.Provider, jenkinsContext.ChangeRequest
+		return jenkinsContext
 	}
 
 	// is Gitlab?
 	gitlabContext := FromGitlab()
 	if gitlabContext != nil {
-		return gitlabContext.Commit, gitlabContext.Branch, gitlabContext.GetTargetBranch(), gitlabContext.Provider, gitlabContext.ChangeRequest
+		return gitlabContext
 	}
 
 	// in local branches, we are not in pull/merge requests
 	localContext := FromLocal()
 	if localContext != nil {
-		return localContext.Commit, localContext.Branch, localContext.GetTargetBranch(), localContext.Provider, localContext.ChangeRequest
+		return localContext
 	}
 
-	return "", "", "", "", false
+	return &ScmContext{
+		Commit:        "",
+		Branch:        "",
+		TargetBranch:  "",
+		Provider:      "",
+		ChangeRequest: false,
+	}
 }
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
