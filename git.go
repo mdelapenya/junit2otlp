@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	git "github.com/go-git/go-git/v5"
@@ -14,6 +13,7 @@ import (
 
 type GitScm struct {
 	baseRef        string
+	branchName     string
 	headSha        string
 	changeRequest  bool // if the tool is evaluating a change request or a branch
 	provider       string
@@ -33,9 +33,10 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
-	headSha, baseRef, gitProvider, changeRequest := checkGitProvider()
+	headSha, branch, baseRef, gitProvider, changeRequest := checkGitProvider()
 
 	scm.headSha = headSha
+	scm.branchName = branch
 	scm.baseRef = baseRef
 	scm.changeRequest = changeRequest
 	scm.provider = gitProvider
@@ -85,28 +86,32 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 // checkGitProvider identies the head sha and target branch from the environment variables that are
 // populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
 // look up this tool-specific variable for the target branch.
-func checkGitProvider() (string, string, string, bool) {
+func checkGitProvider() (string, string, string, string, bool) {
 	// is Github?
 	githubContext := FromGithub()
 	if githubContext != nil {
-		return githubContext.Commit, githubContext.GetTargetBranch(), githubContext.Provider, githubContext.ChangeRequest
+		return githubContext.Commit, githubContext.Branch, githubContext.GetTargetBranch(), githubContext.Provider, githubContext.ChangeRequest
 	}
 
 	// is Jenkins?
 	jenkinsContext := FromJenkins()
 	if jenkinsContext != nil {
-		return jenkinsContext.Commit, jenkinsContext.GetTargetBranch(), jenkinsContext.Provider, jenkinsContext.ChangeRequest
+		return jenkinsContext.Commit, jenkinsContext.Branch, jenkinsContext.GetTargetBranch(), jenkinsContext.Provider, jenkinsContext.ChangeRequest
 	}
 
 	// is Gitlab?
 	gitlabContext := FromGitlab()
 	if gitlabContext != nil {
-		return gitlabContext.Commit, gitlabContext.GetTargetBranch(), gitlabContext.Provider, gitlabContext.ChangeRequest
+		return gitlabContext.Commit, gitlabContext.Branch, gitlabContext.GetTargetBranch(), gitlabContext.Provider, gitlabContext.ChangeRequest
 	}
 
 	// in local branches, we are not in pull/merge requests
-	baseRef := os.Getenv("TARGET_BRANCH")
-	return "", baseRef, "", false
+	localContext := FromLocal()
+	if localContext != nil {
+		return localContext.Commit, localContext.Branch, localContext.GetTargetBranch(), localContext.Provider, localContext.ChangeRequest
+	}
+
+	return "", "", "", "", false
 }
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
@@ -140,11 +145,8 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(origin.Config().URLs))
 
-	branch, err := scm.repository.Head()
-	if err != nil {
-		return gitAttributes
-	}
-	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(branch.Name().String()))
+	// do not read HEAD, and simply use the branch name coming from the SCM struct
+	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(scm.branchName))
 
 	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {

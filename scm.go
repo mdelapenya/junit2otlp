@@ -94,7 +94,24 @@ func FromJenkins() *ScmContext {
 			TargetBranch:  headRef,
 		}
 	}
+}
 
+func FromLocal() *ScmContext {
+	baseRef := os.Getenv("TARGET_BRANCH")
+	headRef := os.Getenv("BRANCH")
+	if headRef == "" {
+		return nil
+	}
+
+	isPR := (baseRef != "")
+
+	return &ScmContext{
+		ChangeRequest: isPR,
+		Commit:        "",
+		Branch:        headRef,
+		Provider:      "",
+		TargetBranch:  baseRef,
+	}
 }
 
 // GetScm checks if the underlying filesystem repository is a Git repository
