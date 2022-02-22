@@ -269,6 +269,10 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Jenkins", func(t *testing.T) {
+		if originalGithubSha != "" {
+			t.Skip("Tests skipped when running on Github")
+		}
+
 		// prepare Jenkins
 		jenkinsChangeID := os.Getenv("CHANGE_ID")
 		jenkinsGitCommit := os.Getenv("GIT_COMMIT")
