@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+// GitScm represents the metadata used to build a Git SCM repository
 type GitScm struct {
 	baseRef        string
 	branchName     string
@@ -21,6 +22,7 @@ type GitScm struct {
 	repositoryPath string
 }
 
+// NewGitScm retrieves a Git SCM repository, using the repository filesystem path to read it
 func NewGitScm(repositoryPath string) *GitScm {
 	scm := &GitScm{
 		repositoryPath: repositoryPath,

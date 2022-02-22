@@ -9,14 +9,23 @@ type Scm interface {
 	OTELAttributesContributor
 }
 
+// ScmContext represent the execution context in which the SCM is used
 type ScmContext struct {
-	Branch        string
+	// Branch the name of the branch, which will be calculated
+	// reading the environment variables for each supported context
+	Branch string
+	// ChangeRequest if the SCM context is for a change request
 	ChangeRequest bool
-	Commit        string
-	Provider      string
-	TargetBranch  string
+	// Commit the commit hash for the SCM context
+	Commit string
+	// Provider the provider of the SCM context: Github, Gitlab, Jenkins, Other, etc.
+	Provider string
+	// TargetBranch the name of the branch in the case the SCM context represents a
+	// change request. In the case ChangeRequest is false, it won't be considered
+	TargetBranch string
 }
 
+// GetTargetBranch returns the target branch for change requests, or branches in any other case
 func (ctx *ScmContext) GetTargetBranch() string {
 	if ctx.ChangeRequest {
 		return ctx.TargetBranch
@@ -25,6 +34,8 @@ func (ctx *ScmContext) GetTargetBranch() string {
 	return ctx.Branch
 }
 
+// FromGithub returns an SCM context for Github, reading the right environment variables, as described
+// in their docs
 func FromGithub() *ScmContext {
 	if os.Getenv("GITHUB_SHA") == "" {
 		return nil
@@ -46,6 +57,8 @@ func FromGithub() *ScmContext {
 	}
 }
 
+// FromGitlab returns an SCM context for Gitlab, reading the right environment variables, as described
+// in their docs
 func FromGitlab() *ScmContext {
 	if os.Getenv("CI_COMMIT_REF_NAME") == "" {
 		return nil
@@ -67,6 +80,8 @@ func FromGitlab() *ScmContext {
 	}
 }
 
+// FromJenkins returns an SCM context for Jenkins, reading the right environment variables, as described
+// in their docs
 func FromJenkins() *ScmContext {
 	if os.Getenv("JENKINS_URL") == "" {
 		return nil
@@ -96,6 +111,9 @@ func FromJenkins() *ScmContext {
 	}
 }
 
+// FromLocal returns an SCM context for local, using TARGET_BRANCH and BRANCH as the variables controlling
+// if the SCM context represents a change request. BRANCH is mandatory, otherwise an empty context will be retrieved.
+// If TARGET_BRANCH is not empty, it will represent a change request
 func FromLocal() *ScmContext {
 	baseRef := os.Getenv("TARGET_BRANCH")
 	headRef := os.Getenv("BRANCH")
