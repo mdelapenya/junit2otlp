@@ -208,41 +208,26 @@ func (r *FakeGitRepo) read() *GitScm {
 }
 
 func TestCheckGitContext(t *testing.T) {
-	// Prepare Github
-	originalSha := os.Getenv("GITHUB_SHA")
-	originalBaseRef := os.Getenv("GITHUB_BASE_REF")
-	originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
-	cleanGithubFn := func() {
-		os.Unsetenv("GITHUB_SHA")
-		os.Unsetenv("GITHUB_BASE_REF")
-		os.Unsetenv("GITHUB_HEAD_REF")
-	}
-	restoreGithubFn := func() {
-		os.Setenv("GITHUB_SHA", originalSha)
-		os.Setenv("GITHUB_BASE_REF", originalBaseRef)
-		os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
-	}
-
-	// prepare Gitlab
-	originalCommitBranch := os.Getenv("CI_COMMIT_BRANCH")
-	gitlabRefName := os.Getenv("CI_COMMIT_REF_NAME")
-	originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
-	originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
-	restoreGitlabFn := func() {
-		os.Setenv("CI_COMMIT_BRANCH", originalCommitBranch)
-		os.Setenv("CI_COMMIT_REF_NAME", gitlabRefName)
-		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
-		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
-	}
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	originalGitlabBranch := os.Getenv("CI_COMMIT_BRANCH")
 
 	t.Run("Github", func(t *testing.T) {
-		if originalCommitBranch != "" {
+		// Prepare Github
+		originalBaseRef := os.Getenv("GITHUB_BASE_REF")
+		originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
+		restoreGithubFn := func() {
+			os.Setenv("GITHUB_SHA", originalGithubSha)
+			os.Setenv("GITHUB_BASE_REF", originalBaseRef)
+			os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
+		}
+
+		if originalGitlabBranch != "" {
 			t.Skip("Tests skipped when running on Gitlab")
 		}
 
 		testSha := "0123456"
-		if originalSha != "" {
-			testSha = originalSha
+		if originalGithubSha != "" {
+			testSha = originalGithubSha
 		}
 
 		testBaseRef := ""
@@ -335,11 +320,20 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Gitlab", func(t *testing.T) {
-		if originalSha != "" {
+		if originalGithubSha != "" {
 			t.Skip("Tests skipped when running on Github")
 		}
 
-		cleanGithubFn()
+		// prepare Gitlab
+		gitlabRefName := os.Getenv("CI_COMMIT_REF_NAME")
+		originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
+		originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
+		restoreGitlabFn := func() {
+			os.Setenv("CI_COMMIT_BRANCH", originalGitlabBranch)
+			os.Setenv("CI_COMMIT_REF_NAME", gitlabRefName)
+			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
+			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
+		}
 
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("CI_COMMIT_BRANCH", "branch")
@@ -347,7 +341,6 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer restoreGitlabFn()
-			defer restoreGithubFn()
 
 			gitCtx := checkGiContext()
 			assert.Equal(t, "0123456", gitCtx.Commit)
@@ -362,7 +355,6 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer restoreGitlabFn()
-			defer restoreGithubFn()
 
 			gitCtx := checkGiContext()
 			assert.Equal(t, "0123456", gitCtx.Commit)
@@ -374,16 +366,13 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Local machine", func(t *testing.T) {
-		if originalSha != "" {
+		if originalGithubSha != "" {
 			t.Skip("Tests skipped when running on Github")
 		}
-
-		cleanGithubFn()
 
 		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
 			os.Setenv("BRANCH", "foo")
 			os.Setenv("TARGET_BRANCH", "main")
-			defer restoreGithubFn()
 			defer os.Unsetenv("TARGET_BRANCH")
 			defer os.Unsetenv("BRANCH")
 
@@ -397,7 +386,6 @@ func TestCheckGitContext(t *testing.T) {
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
 			os.Setenv("BRANCH", "foo")
-			defer restoreGithubFn()
 			defer os.Unsetenv("BRANCH")
 
 			gitCtx := checkGiContext()
