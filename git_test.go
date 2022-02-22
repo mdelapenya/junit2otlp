@@ -408,6 +408,11 @@ func TestCheckGitContext(t *testing.T) {
 			assert.False(t, gitCtx.ChangeRequest)
 		})
 	})
+
+	t.Run("Empty SCM context", func(t *testing.T) {
+		gitCtx := checkGiContext()
+		assert.Nil(t, gitCtx)
+	})
 }
 
 func TestGit_ContributeAttributesCloneOptions(t *testing.T) {

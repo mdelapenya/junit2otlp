@@ -36,6 +36,9 @@ func NewGitScm(repositoryPath string) *GitScm {
 	scm.repository = repository
 
 	gitCtx := checkGiContext()
+	if gitCtx == nil {
+		return nil
+	}
 
 	scm.headSha = gitCtx.Commit
 	scm.branchName = gitCtx.Branch
@@ -113,13 +116,8 @@ func checkGiContext() *ScmContext {
 		return localContext
 	}
 
-	return &ScmContext{
-		Commit:        "",
-		Branch:        "",
-		TargetBranch:  "",
-		Provider:      "",
-		ChangeRequest: false,
-	}
+	// SCM context not supported
+	return nil
 }
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
