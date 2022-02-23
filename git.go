@@ -92,6 +92,12 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 // populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
 // look up this tool-specific variable for the target branch.
 func checkGiContext() *ScmContext {
+	// in local branches, we are not in pull/merge requests
+	localContext := FromLocal()
+	if localContext != nil {
+		return localContext
+	}
+
 	// is Github?
 	githubContext := FromGithub()
 	if githubContext != nil {
@@ -108,12 +114,6 @@ func checkGiContext() *ScmContext {
 	gitlabContext := FromGitlab()
 	if gitlabContext != nil {
 		return gitlabContext
-	}
-
-	// in local branches, we are not in pull/merge requests
-	localContext := FromLocal()
-	if localContext != nil {
-		return localContext
 	}
 
 	// SCM context not supported

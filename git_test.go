@@ -378,7 +378,6 @@ func TestCheckGitContext(t *testing.T) {
 
 	t.Run("Local machine", func(t *testing.T) {
 		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
-			unsetGithub()
 			os.Setenv("BRANCH", "foo")
 			os.Setenv("TARGET_BRANCH", "main")
 			defer os.Unsetenv("TARGET_BRANCH")
@@ -394,7 +393,6 @@ func TestCheckGitContext(t *testing.T) {
 		})
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
-			unsetGithub()
 			os.Setenv("BRANCH", "foo")
 			defer os.Unsetenv("BRANCH")
 			restoreSCMContextsFn()
