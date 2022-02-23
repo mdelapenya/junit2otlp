@@ -224,10 +224,12 @@ func TestCheckGitContext(t *testing.T) {
 		// Prepare Github
 		originalBaseRef := os.Getenv("GITHUB_BASE_REF")
 		originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
+		originalRefName := os.Getenv("GITHUB_REF_NAME")
 		restoreGithubFn := func() {
 			restoreSCMContextsFn()
 			os.Setenv("GITHUB_BASE_REF", originalBaseRef)
 			os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
+			os.Setenv("GITHUB_REF_NAME", originalRefName)
 		}
 
 		if originalGitlabBranch != "" {
@@ -235,29 +237,23 @@ func TestCheckGitContext(t *testing.T) {
 		}
 
 		testSha := "0123456"
+		testBaseRef := "main"
+		testHeadRef := "feature/pr-23"
 		if originalGithubSha != "" {
 			testSha = originalGithubSha
 		}
 
-		testBaseRef := ""
-		if originalBaseRef != "" {
-			testBaseRef = originalBaseRef
-		}
-
-		testHeadRef := "feature/pr-23"
-		if originalHeadRef != "" {
-			testHeadRef = originalHeadRef
-		}
-
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
-			os.Setenv("GITHUB_BASE_REF", originalHeadRef)
+			os.Setenv("GITHUB_REF_NAME", testHeadRef)
+			os.Setenv("GITHUB_BASE_REF", "") // only for pull requests
+			os.Setenv("GITHUB_HEAD_REF", "") // only for pull requests
 			defer restoreGithubFn()
 
 			gitCtx := checkGiContext()
 			assert.Equal(t, testSha, gitCtx.Commit)
-			assert.Equal(t, testBaseRef, gitCtx.Branch)
-			assert.Equal(t, testBaseRef, gitCtx.GetTargetBranch())
+			assert.Equal(t, testHeadRef, gitCtx.Branch)
+			assert.Equal(t, testHeadRef, gitCtx.GetTargetBranch())
 			assert.Equal(t, "Github", gitCtx.Provider)
 			assert.False(t, gitCtx.ChangeRequest)
 		})
@@ -265,14 +261,14 @@ func TestCheckGitContext(t *testing.T) {
 		t.Run("Running for Pull Requests", func(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
 			os.Setenv("GITHUB_REF_NAME", testHeadRef)
-			os.Setenv("GITHUB_BASE_REF", "main")
+			os.Setenv("GITHUB_BASE_REF", testBaseRef)
 			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
 			defer restoreGithubFn()
 
 			gitCtx := checkGiContext()
 			assert.Equal(t, testSha, gitCtx.Commit)
 			assert.Equal(t, testHeadRef, gitCtx.Branch)
-			assert.Equal(t, "main", gitCtx.GetTargetBranch())
+			assert.Equal(t, testBaseRef, gitCtx.GetTargetBranch())
 			assert.Equal(t, "Github", gitCtx.Provider)
 			assert.True(t, gitCtx.ChangeRequest)
 		})
