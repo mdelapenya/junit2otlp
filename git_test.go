@@ -251,6 +251,7 @@ func TestCheckGitContext(t *testing.T) {
 
 		t.Run("Running for Branches", func(t *testing.T) {
 			os.Setenv("GITHUB_SHA", testSha)
+			os.Setenv("GITHUB_BASE_REF", originalHeadRef)
 			defer restoreGithubFn()
 
 			gitCtx := checkGiContext()
