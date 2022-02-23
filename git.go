@@ -88,38 +88,6 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 	return headCommit, targetCommit, nil
 }
 
-// checkGiContext identifies the head sha and target branch from the environment variables that are
-// populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
-// look up this tool-specific variable for the target branch.
-func checkGiContext() *ScmContext {
-	// in local branches, we are not in pull/merge requests
-	localContext := FromLocal()
-	if localContext != nil {
-		return localContext
-	}
-
-	// is Github?
-	githubContext := FromGithub()
-	if githubContext != nil {
-		return githubContext
-	}
-
-	// is Jenkins?
-	jenkinsContext := FromJenkins()
-	if jenkinsContext != nil {
-		return jenkinsContext
-	}
-
-	// is Gitlab?
-	gitlabContext := FromGitlab()
-	if gitlabContext != nil {
-		return gitlabContext
-	}
-
-	// SCM context not supported
-	return nil
-}
-
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
 func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
