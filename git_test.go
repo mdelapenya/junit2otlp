@@ -207,153 +207,13 @@ func (r *FakeGitRepo) read() *GitScm {
 	return scm
 }
 
-func TestCheckGitProvider(t *testing.T) {
-	// Prepare Github
-	originalSha := os.Getenv("GITHUB_SHA")
-	originalBaseRef := os.Getenv("GITHUB_BASE_REF")
-	originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
-	cleanGithubFn := func() {
-		os.Unsetenv("GITHUB_SHA")
-		os.Unsetenv("GITHUB_BASE_REF")
-		os.Unsetenv("GITHUB_HEAD_REF")
-	}
-	restoreGithubFn := func() {
-		os.Setenv("GITHUB_SHA", originalSha)
-		os.Setenv("GITHUB_BASE_REF", originalBaseRef)
-		os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
-	}
-
-	// prepare Gitlab
-	originalCommitBranch := os.Getenv("CI_COMMIT_BRANCH")
-	originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
-	originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
-	restoreGitlabFn := func() {
-		os.Setenv("CI_COMMIT_BRANCH", originalCommitBranch)
-		os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
-		os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
-	}
-
-	t.Run("Github", func(t *testing.T) {
-		if originalCommitBranch != "" {
-			t.Skip("Tests skipped when running on Gitlab")
-		}
-
-		testChangeRequest := false
-
-		testSha := "0123456"
-		if originalSha != "" {
-			testSha = originalSha
-		}
-
-		testBaseRef := ""
-		if originalBaseRef != "" {
-			testBaseRef = originalBaseRef
-		}
-
-		testHeadRef := "feature/pr-23"
-		if originalHeadRef != "" {
-			testHeadRef = originalHeadRef
-		}
-
-		t.Run("Running for Branches", func(t *testing.T) {
-			os.Setenv("GITHUB_SHA", testSha)
-			if originalBaseRef != "" || originalHeadRef != "" {
-				testChangeRequest = true
-			}
-			defer restoreGithubFn()
-
-			sha, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, testSha, sha)
-			assert.Equal(t, testBaseRef, baseRef)
-			assert.Equal(t, "Github", provider)
-			assert.Equal(t, testChangeRequest, changeRequest)
-		})
-
-		t.Run("Running for Pull Requests", func(t *testing.T) {
-			os.Setenv("GITHUB_SHA", testSha)
-			os.Setenv("GITHUB_BASE_REF", "main")
-			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
-			defer restoreGithubFn()
-
-			sha, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, testSha, sha)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "Github", provider)
-			assert.True(t, changeRequest)
-		})
-	})
-
-	t.Run("Gitlab", func(t *testing.T) {
-		if originalSha != "" {
-			t.Skip("Tests skipped when running on Github")
-		}
-
-		cleanGithubFn()
-
-		t.Run("Running for Branches", func(t *testing.T) {
-			os.Setenv("CI_COMMIT_BRANCH", "branch")
-			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
-			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-			defer restoreGitlabFn()
-			defer restoreGithubFn()
-
-			sha, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "0123456", sha)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "Gitlab", provider)
-			assert.False(t, changeRequest)
-		})
-
-		t.Run("Running for Merge Requests", func(t *testing.T) {
-			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
-			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-			defer restoreGitlabFn()
-			defer restoreGithubFn()
-
-			sha, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "0123456", sha)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "Gitlab", provider)
-			assert.True(t, changeRequest)
-		})
-	})
-
-	t.Run("Local machine", func(t *testing.T) {
-		if originalSha != "" {
-			t.Skip("Tests skipped when running on Github")
-		}
-
-		cleanGithubFn()
-
-		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
-			os.Setenv("TARGET_BRANCH", "main")
-			defer restoreGithubFn()
-			defer os.Unsetenv("TARGET_BRANCH")
-
-			sha, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "", sha)
-			assert.Equal(t, "main", baseRef)
-			assert.Equal(t, "", provider)
-			assert.False(t, changeRequest)
-		})
-
-		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
-			defer restoreGithubFn()
-
-			sha, baseRef, provider, changeRequest := checkGitProvider()
-			assert.Equal(t, "", sha)
-			assert.Equal(t, "", baseRef)
-			assert.Equal(t, "", provider)
-			assert.False(t, changeRequest)
-		})
-	})
-}
-
 func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
-	defer os.Unsetenv("TARGET_BRANCH")
+	os.Setenv("BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
+	defer func() {
+		os.Unsetenv("BRANCH")
+	}()
 
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{Depth: 1})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{Depth: 1})).read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -366,10 +226,15 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
+	branchName := "this-is-a-test-branch"
+	os.Setenv("BRANCH", branchName)
 	os.Setenv("TARGET_BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
-	defer os.Unsetenv("TARGET_BRANCH")
+	defer func() {
+		os.Unsetenv("TARGET_BRANCH")
+		os.Unsetenv("BRANCH")
+	}()
 
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 	if scm == nil {
 		t.FailNow()
 	}
@@ -389,7 +254,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "HEAD") }, "should be set as scm.branch. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
@@ -397,6 +262,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForBranches(t *testing.T) {
+	os.Setenv("BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
 	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 	if scm == nil {
 		t.FailNow()
@@ -416,7 +282,7 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "refs/heads/master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
+	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
 	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 	assert.Condition(t, func() bool {
 		return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
