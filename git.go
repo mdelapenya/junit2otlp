@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	git "github.com/go-git/go-git/v5"
@@ -12,8 +11,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+// GitScm represents the metadata used to build a Git SCM repository
 type GitScm struct {
 	baseRef        string
+	branchName     string
 	headSha        string
 	changeRequest  bool // if the tool is evaluating a change request or a branch
 	provider       string
@@ -21,6 +22,7 @@ type GitScm struct {
 	repositoryPath string
 }
 
+// NewGitScm retrieves a Git SCM repository, using the repository filesystem path to read it
 func NewGitScm(repositoryPath string) *GitScm {
 	scm := &GitScm{
 		repositoryPath: repositoryPath,
@@ -33,12 +35,16 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
-	headSha, baseRef, gitProvider, changeRequest := checkGitProvider()
+	gitCtx := checkGiContext()
+	if gitCtx == nil {
+		return nil
+	}
 
-	scm.headSha = headSha
-	scm.baseRef = baseRef
-	scm.changeRequest = changeRequest
-	scm.provider = gitProvider
+	scm.headSha = gitCtx.Commit
+	scm.branchName = gitCtx.Branch
+	scm.baseRef = gitCtx.GetTargetBranch()
+	scm.changeRequest = gitCtx.ChangeRequest
+	scm.provider = gitCtx.Provider
 
 	return scm
 }
@@ -82,33 +88,6 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 	return headCommit, targetCommit, nil
 }
 
-// checkGitProvider identies the head sha and target branch from the environment variables that are
-// populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
-// look up this tool-specific variable for the target branch.
-func checkGitProvider() (string, string, string, bool) {
-	// is Github?
-	sha := os.Getenv("GITHUB_SHA")
-	baseRef := os.Getenv("GITHUB_BASE_REF") // only present for pull requests on Github Actions
-	headRef := os.Getenv("GITHUB_HEAD_REF") // only present for pull requests on Github Actions
-	if sha != "" && baseRef != "" && headRef != "" {
-		return sha, baseRef, "Github", true
-	} else if sha != "" {
-		return sha, "", "Github", false
-	}
-
-	// is Gitlab?
-	commitBranch := os.Getenv("CI_COMMIT_BRANCH")              // only present on branches on Gitlab CI
-	sha = os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")      // only present on merge requests on Gitlab CI
-	baseRef = os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME") // only present on merge requests on Gitlab CI
-	if sha != "" && baseRef != "" {
-		return sha, baseRef, "Gitlab", commitBranch == ""
-	}
-
-	// in local branches, we are not in pull/merge requests
-	baseRef = os.Getenv("TARGET_BRANCH")
-	return "", baseRef, "", false
-}
-
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
 func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
@@ -140,11 +119,8 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(origin.Config().URLs))
 
-	branch, err := scm.repository.Head()
-	if err != nil {
-		return gitAttributes
-	}
-	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(branch.Name().String()))
+	// do not read HEAD, and simply use the branch name coming from the SCM struct
+	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(scm.branchName))
 
 	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
