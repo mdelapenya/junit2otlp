@@ -169,7 +169,7 @@ func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter, res *resource.Resource) (*controller.Controller, error) {
 	pusher := controller.New(
 		processor.NewFactory(
-			simple.NewWithExactDistribution(),
+			simple.NewWithHistogramDistribution(),
 			exporter,
 		),
 		controller.WithExporter(exporter),
