@@ -56,7 +56,7 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("GITHUB_HEAD_REF", "") // only for pull requests
 			defer restoreGithubFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, testSha, gitCtx.Commit)
 			assert.Equal(t, testHeadRef, gitCtx.Branch)
 			assert.Equal(t, testHeadRef, gitCtx.GetTargetBranch())
@@ -72,7 +72,7 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
 			defer restoreGithubFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, testSha, gitCtx.Commit)
 			assert.Equal(t, testHeadRef, gitCtx.Branch)
 			assert.Equal(t, testBaseRef, gitCtx.GetTargetBranch())
@@ -110,7 +110,7 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("BRANCH_NAME", testBranch)
 			defer restoreJenkinsFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, testSha, gitCtx.Commit)
 			assert.Equal(t, testBranch, gitCtx.Branch)
 			assert.Equal(t, testBranch, gitCtx.GetTargetBranch())
@@ -128,7 +128,7 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("BRANCH_NAME", testBranch)
 			defer restoreJenkinsFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, testSha, gitCtx.Commit)
 			assert.Equal(t, testBranch, gitCtx.Branch)
 			assert.Equal(t, "main", gitCtx.GetTargetBranch())
@@ -158,7 +158,7 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer restoreGitlabFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, "0123456", gitCtx.Commit)
 			assert.Equal(t, "branch", gitCtx.Branch)
 			assert.Equal(t, "branch", gitCtx.GetTargetBranch())
@@ -174,7 +174,7 @@ func TestCheckGitContext(t *testing.T) {
 			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 			defer restoreGitlabFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, "0123456", gitCtx.Commit)
 			assert.Equal(t, "branch", gitCtx.Branch)
 			assert.Equal(t, "main", gitCtx.GetTargetBranch())
@@ -192,7 +192,7 @@ func TestCheckGitContext(t *testing.T) {
 			defer os.Unsetenv("BRANCH")
 			defer restoreSCMContextsFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, "", gitCtx.Commit)
 			assert.Equal(t, "foo", gitCtx.Branch)
 			assert.Equal(t, "main", gitCtx.GetTargetBranch())
@@ -206,7 +206,7 @@ func TestCheckGitContext(t *testing.T) {
 			defer os.Unsetenv("BRANCH")
 			defer restoreSCMContextsFn()
 
-			gitCtx := checkGiContext()
+			gitCtx := checkGitContext()
 			assert.Equal(t, "", gitCtx.Commit)
 			assert.Equal(t, "foo", gitCtx.Branch)
 			assert.Equal(t, "foo", gitCtx.GetTargetBranch())
@@ -220,7 +220,7 @@ func TestCheckGitContext(t *testing.T) {
 		unsetGithub()
 		defer restoreSCMContextsFn()
 
-		gitCtx := checkGiContext()
+		gitCtx := checkGitContext()
 		assert.Nil(t, gitCtx)
 	})
 }
