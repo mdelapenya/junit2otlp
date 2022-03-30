@@ -226,137 +226,324 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
-	branchName := "this-is-a-test-branch"
-	os.Setenv("BRANCH", branchName)
-	os.Setenv("TARGET_BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
-	defer func() {
-		os.Unsetenv("TARGET_BRANCH")
-		os.Unsetenv("BRANCH")
-	}()
-
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
-	if scm == nil {
-		t.FailNow()
+	type testData struct {
+		provider string
+		env      map[string]string
 	}
 
-	atts := scm.contributeAttributes()
+	branchName := "this-is-a-test-branch"
 
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+	tests := []testData{
+		{
+			provider: "local",
+			env: map[string]string{
+				"BRANCH":        branchName,
+				"TARGET_BRANCH": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+		{
+			provider: "jenkins",
+			env: map[string]string{
+				"JENKINS_URL":   "http://local.jenkins.org",
+				"CHANGE_ID":     branchName,
+				"GIT_COMMIT":    "HEAD",
+				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+	}
 
-	if scm.changeRequest {
+	runTests := func(t *testing.T, td testData) {
+		for k, v := range td.env {
+			os.Setenv(k, v)
+		}
+		defer func() {
+			for k := range td.env {
+				os.Unsetenv(k)
+			}
+		}()
+
+		scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+		if scm == nil {
+			t.FailNow()
+		}
+
+		atts := scm.contributeAttributes()
+
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+
+		if scm.changeRequest {
+			// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
+			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
+		}
+
+		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
+		assert.Condition(t, func() bool {
+			return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
+		}, "Remote should be set as scm.repository. Attributes: %v", atts)
+	}
+
+	for _, td := range tests {
+		runTests(t, td)
+	}
+}
+
+func TestGit_ContributeAttributesForBranches(t *testing.T) {
+	type testData struct {
+		provider string
+		env      map[string]string
+	}
+
+	tests := []testData{
+		{
+			provider: "local",
+			env: map[string]string{
+				"BRANCH": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+		{
+			provider: "jenkins",
+			env: map[string]string{
+				"JENKINS_URL":   "http://local.jenkins.org",
+				"BRANCH_NAME":   "master",
+				"GIT_COMMIT":    "HEAD",
+				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+	}
+
+	runTests := func(t *testing.T, td testData) {
+		for k, v := range td.env {
+			os.Setenv(k, v)
+		}
+		defer func() {
+			for k := range td.env {
+				os.Unsetenv(k)
+			}
+		}()
+
+		scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
+		if scm == nil {
+			t.FailNow()
+		}
+
+		atts := scm.contributeAttributes()
+
+		assert.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
+
+		if scm.changeRequest {
+			assert.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
+			assert.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
+			assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
+		}
+
+		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
+		assert.Condition(t, func() bool {
+			return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
+		}, "Remote should be set as scm.repository. Attributes: %v", atts)
+	}
+
+	for _, td := range tests {
+		runTests(t, td)
+	}
+}
+
+func TestGit_ContributeCommitters(t *testing.T) {
+	branchName := "this-is-a-test-branch"
+
+	type testData struct {
+		provider string
+		env      map[string]string
+	}
+
+	tests := []testData{
+		{
+			provider: "local",
+			env: map[string]string{
+				"BRANCH":        branchName,
+				"TARGET_BRANCH": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+		{
+			provider: "jenkins",
+			env: map[string]string{
+				"JENKINS_URL":   "http://local.jenkins.org",
+				"CHANGE_ID":     branchName,
+				"BRANCH_NAME":   "master",
+				"GIT_COMMIT":    "HEAD",
+				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+	}
+
+	runTests := func(t *testing.T, td testData) {
+		for k, v := range td.env {
+			os.Setenv(k, v)
+		}
+		defer func() {
+			for k := range td.env {
+				os.Unsetenv(k)
+			}
+		}()
+
+		scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
+		if scm == nil {
+			t.FailNow()
+		}
+
+		headCommit, targetCommit, err := scm.calculateCommits()
+		if err != nil {
+			t.Error()
+		}
+
+		atts, err := scm.contributeCommitters(headCommit, targetCommit)
+		if err != nil {
+			t.Error()
+		}
+
+		assert.Equal(t, 2, len(atts))
+		// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+		assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+	}
+
+	for _, td := range tests {
+		runTests(t, td)
+	}
+}
+
+func TestGit_ContributeFilesAndLines(t *testing.T) {
+	branchName := "this-is-a-test-branch"
+
+	type testData struct {
+		provider string
+		env      map[string]string
+	}
+
+	tests := []testData{
+		{
+			provider: "local",
+			env: map[string]string{
+				"BRANCH":        branchName,
+				"TARGET_BRANCH": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+		{
+			provider: "jenkins",
+			env: map[string]string{
+				"JENKINS_URL":   "http://local.jenkins.org",
+				"CHANGE_ID":     branchName,
+				"BRANCH_NAME":   "master",
+				"GIT_COMMIT":    "HEAD",
+				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+	}
+
+	runTests := func(t *testing.T, td testData) {
+		for k, v := range td.env {
+			os.Setenv(k, v)
+		}
+		defer func() {
+			for k := range td.env {
+				os.Unsetenv(k)
+			}
+		}()
+
+		scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+		if scm == nil {
+			t.FailNow()
+		}
+
+		headCommit, targetCommit, err := scm.calculateCommits()
+		if err != nil {
+			t.Error()
+		}
+
+		// TODO: verify attributes in a consistent manner on the CI. Until then, check there are no errors
+		atts, err := scm.contributeFilesAndLines(headCommit, targetCommit)
+		if err != nil {
+			t.Error()
+		}
+
+		assert.Equal(t, 3, len(atts))
 		// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
 		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
 		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
 		assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 	}
 
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
-	assert.Condition(t, func() bool {
-		return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
-	}, "Remote should be set as scm.repository. Attributes: %v", atts)
-}
-
-func TestGit_ContributeAttributesForBranches(t *testing.T) {
-	os.Setenv("BRANCH", "master") // master branch is the base branch for the fake repository (octocat/hello-world)
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
-	if scm == nil {
-		t.FailNow()
+	for _, td := range tests {
+		runTests(t, td)
 	}
-
-	atts := scm.contributeAttributes()
-
-	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
-
-	if scm.changeRequest {
-		assert.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
-		assert.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
-		assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
-	}
-
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
-	assert.Condition(t, func() bool {
-		return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
-	}, "Remote should be set as scm.repository. Attributes: %v", atts)
-}
-
-func TestGit_ContributeCommitters(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "master")
-	defer os.Unsetenv("TARGET_BRANCH")
-
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
-	if scm == nil {
-		t.FailNow()
-	}
-
-	headCommit, targetCommit, err := scm.calculateCommits()
-	if err != nil {
-		t.Error()
-	}
-
-	atts, err := scm.contributeCommitters(headCommit, targetCommit)
-	if err != nil {
-		t.Error()
-	}
-
-	assert.Equal(t, 2, len(atts))
-	// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
-}
-
-func TestGit_ContributeFilesAndLines(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "master")
-	defer os.Unsetenv("TARGET_BRANCH")
-
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
-	if scm == nil {
-		t.FailNow()
-	}
-
-	headCommit, targetCommit, err := scm.calculateCommits()
-	if err != nil {
-		t.Error()
-	}
-
-	// TODO: verify attributes in a consistent manner on the CI. Until then, check there are no errors
-	atts, err := scm.contributeFilesAndLines(headCommit, targetCommit)
-	if err != nil {
-		t.Error()
-	}
-
-	assert.Equal(t, 3, len(atts))
-	// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
-	assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 }
 
 func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
-	os.Setenv("TARGET_BRANCH", "master")
-	defer os.Unsetenv("TARGET_BRANCH")
+	branchName := "this-is-a-test-branch"
 
-	scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch("this-is-a-test-branch").addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
-	if scm == nil {
-		t.FailNow()
+	type testData struct {
+		provider string
+		env      map[string]string
 	}
 
-	headCommit, targetCommit, err := scm.calculateCommits()
-	if err != nil {
-		t.Error()
+	tests := []testData{
+		{
+			provider: "local",
+			env: map[string]string{
+				"BRANCH":        branchName,
+				"TARGET_BRANCH": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+		{
+			provider: "jenkins",
+			env: map[string]string{
+				"JENKINS_URL":   "http://local.jenkins.org",
+				"CHANGE_ID":     branchName,
+				"BRANCH_NAME":   "master",
+				"GIT_COMMIT":    "HEAD",
+				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
 	}
 
-	assert.NotNil(t, headCommit)
-	assert.NotNil(t, targetCommit)
+	runTests := func(t *testing.T, td testData) {
+		for k, v := range td.env {
+			os.Setenv(k, v)
+		}
+		defer func() {
+			for k := range td.env {
+				os.Unsetenv(k)
+			}
+		}()
+
+		scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+		if scm == nil {
+			t.FailNow()
+		}
+
+		headCommit, targetCommit, err := scm.calculateCommits()
+		if err != nil {
+			t.Error()
+		}
+
+		assert.NotNil(t, headCommit)
+		assert.NotNil(t, targetCommit)
+	}
+
+	for _, td := range tests {
+		runTests(t, td)
+	}
 }
 
 func TestGit_CalculateCommitsForBranches(t *testing.T) {
