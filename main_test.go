@@ -299,7 +299,7 @@ func Test_Main_SampleXML(t *testing.T) {
 	codeFunction, _ := findAttributeInArray(aTestCase.Attributes, "code.function")
 	assertStringValueInAttribute(t, codeFunction.Value, "TestCheckConfigDirsCreatesWorkspaceAtHome")
 
-	testClassName, _ := findAttributeInArray(aTestCase.Attributes, "test.classname")
+	testClassName, _ := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
 	assertStringValueInAttribute(t, testClassName.Value, "github.com/elastic/e2e-testing/cli/config")
 
 	goVersion, _ := findAttributeInArray(aTestCase.Attributes, "go.version")

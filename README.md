@@ -162,28 +162,28 @@ For each test execution, represented by a test report file, the tool will add th
 
 | Attribute | Description |
 | --------- | ----------- |
-| `tests.failed` | Number of failed tests in the test execution |
-| `tests.error` | Number of errored tests in the test execution |
-| `tests.passed` | Number of passed tests in the test execution |
-| `tests.skipped` | Number of skipped tests in the test execution |
-| `tests.duration` | Duration of the test execution |
-| `tests.suitename` | Name of the test execution |
-| `tests.systemerr` | Log produced by Systemerr |
-| `tests.systemout` | Log produced by Systemout |
-| `tests.total` | Total number of tests in the test execution |
+| `tests.suite.failed` | Number of failed tests in the test execution |
+| `tests.suite.error` | Number of errored tests in the test execution |
+| `tests.suite.passed` | Number of passed tests in the test execution |
+| `tests.suite.skipped` | Number of skipped tests in the test execution |
+| `tests.suite.duration` | Duration of the test execution |
+| `tests.suite.suitename` | Name of the test execution |
+| `tests.suite.systemerr` | Log produced by Systemerr |
+| `tests.suite.systemout` | Log produced by Systemout |
+| `tests.suite.total` | Total number of tests in the test execution |
 
 #### Test case attributes
 For each test case in the test execution, the tool will add the following attributes to the span document representing the test case:
 
 | Attribute | Description |
 | --------- | ----------- |
-| `test.classname` | Classname or file for the test case |
-| `test.duration` | Duration of the test case |
-| `test.error` | Error message of the test case |
-| `test.message` | Message of the test case |
-| `test.status` | Status of the test case |
-| `test.systemerr` | Log produced by Systemerr |
-| `test.systemout` | Log produced by Systemout |
+| `tests.case.classname` | Classname or file for the test case |
+| `tests.case.duration` | Duration of the test case |
+| `tests.case.error` | Error message of the test case |
+| `tests.case.message` | Message of the test case |
+| `tests.case.status` | Status of the test case |
+| `tests.case.systemerr` | Log produced by Systemerr |
+| `tests.case.systemout` | Log produced by Systemout |
 
 ### Ownership attributes
 These attributes are added to the traces and spans sent by the tool, identifying the owner (or owners) of the test suite, trying to correlate a test failure with an author or authors. To identify the owner, the tool will inspect the SCM repository for the project.
