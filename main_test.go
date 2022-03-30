@@ -126,6 +126,11 @@ func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute
 }
 
 func Test_Main_SampleXML(t *testing.T) {
+	os.Setenv("BRANCH", "main")
+	defer func() {
+		os.Unsetenv("BRANCH")
+	}()
+
 	ctx := context.Background()
 
 	// create file for otel to store the traces
