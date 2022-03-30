@@ -280,6 +280,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 			provider: "jenkins",
 			env: map[string]string{
 				"JENKINS_URL":   "http://local.jenkins.org",
+				"BRANCH_NAME":   branchName,
 				"CHANGE_ID":     branchName,
 				"GIT_COMMIT":    "HEAD",
 				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
@@ -419,7 +420,7 @@ func TestGit_ContributeCommitters(t *testing.T) {
 			env: map[string]string{
 				"JENKINS_URL":   "http://local.jenkins.org",
 				"CHANGE_ID":     branchName,
-				"BRANCH_NAME":   "master",
+				"BRANCH_NAME":   branchName,
 				"GIT_COMMIT":    "HEAD",
 				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
 			},
@@ -485,7 +486,7 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 			env: map[string]string{
 				"JENKINS_URL":   "http://local.jenkins.org",
 				"CHANGE_ID":     branchName,
-				"BRANCH_NAME":   "master",
+				"BRANCH_NAME":   branchName,
 				"GIT_COMMIT":    "HEAD",
 				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
 			},
@@ -553,7 +554,7 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 			env: map[string]string{
 				"JENKINS_URL":   "http://local.jenkins.org",
 				"CHANGE_ID":     branchName,
-				"BRANCH_NAME":   "master",
+				"BRANCH_NAME":   branchName,
 				"GIT_COMMIT":    "HEAD",
 				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
 			},
