@@ -24,9 +24,8 @@ jobs:
 
       - name: Get dependencies
         run: |
-          go get -u gotest.tools/gotestsum
           go get google.golang.org/grpc/internal/transport@v1.44.0
           go get google.golang.org/grpc@v1.44.0
 
       - name: Run Unit tests
-        run: gotestsum --format short-verbose -- -timeout=5m ./...
+        run: go run gotest.tools/gotestsum --format short-verbose -- -timeout=5m ./...
