@@ -208,6 +208,12 @@ func (r *FakeGitRepo) read() *GitScm {
 }
 
 func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	type testData struct {
 		provider string
 		env      map[string]string
@@ -261,6 +267,12 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	type testData struct {
 		provider string
 		env      map[string]string
@@ -333,6 +345,12 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForBranches(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	type testData struct {
 		provider string
 		env      map[string]string
@@ -400,6 +418,12 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 }
 
 func TestGit_ContributeCommitters(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	branchName := "this-is-a-test-branch"
 
 	type testData struct {
@@ -466,6 +490,12 @@ func TestGit_ContributeCommitters(t *testing.T) {
 }
 
 func TestGit_ContributeFilesAndLines(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	branchName := "this-is-a-test-branch"
 
 	type testData struct {
@@ -534,6 +564,12 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	branchName := "this-is-a-test-branch"
 
 	type testData struct {
@@ -593,6 +629,12 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForBranches(t *testing.T) {
+	originalGithubSha := os.Getenv("GITHUB_SHA")
+	os.Unsetenv("GITHUB_SHA")
+	defer func() {
+		os.Setenv("GITHUB_SHA", originalGithubSha)
+	}()
+
 	type testData struct {
 		provider string
 		env      map[string]string
