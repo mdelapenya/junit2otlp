@@ -35,7 +35,7 @@ func NewGitScm(repositoryPath string) *GitScm {
 
 	scm.repository = repository
 
-	gitCtx := checkGiContext()
+	gitCtx := checkGitContext()
 	if gitCtx == nil {
 		return nil
 	}

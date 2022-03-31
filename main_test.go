@@ -126,6 +126,11 @@ func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute
 }
 
 func Test_Main_SampleXML(t *testing.T) {
+	os.Setenv("BRANCH", "main")
+	defer func() {
+		os.Unsetenv("BRANCH")
+	}()
+
 	ctx := context.Background()
 
 	// create file for otel to store the traces
@@ -299,7 +304,7 @@ func Test_Main_SampleXML(t *testing.T) {
 	codeFunction, _ := findAttributeInArray(aTestCase.Attributes, "code.function")
 	assertStringValueInAttribute(t, codeFunction.Value, "TestCheckConfigDirsCreatesWorkspaceAtHome")
 
-	testClassName, _ := findAttributeInArray(aTestCase.Attributes, "test.classname")
+	testClassName, _ := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
 	assertStringValueInAttribute(t, testClassName.Value, "github.com/elastic/e2e-testing/cli/config")
 
 	goVersion, _ := findAttributeInArray(aTestCase.Attributes, "go.version")

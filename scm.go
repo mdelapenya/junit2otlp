@@ -25,10 +25,10 @@ type ScmContext struct {
 	TargetBranch string
 }
 
-// checkGiContext identifies the head sha and target branch from the environment variables that are
+// checkGitContext identifies the head sha and target branch from the environment variables that are
 // populated from a Git provider, such as Github or Gitlab. If no proprietary env vars are set, then it will
 // look up this tool-specific variable for the target branch.
-func checkGiContext() *ScmContext {
+func checkGitContext() *ScmContext {
 	// in local branches, we are not in pull/merge requests
 	localContext := FromLocal()
 	if localContext != nil {
