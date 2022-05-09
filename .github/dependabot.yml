@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    assignees:
+      - "mdelapenya"
+    commit-message:
+      prefix: "deps:"
+    directory: "/"
+    labels:
+      - "dependencies"
+    reviewers:
+      - "mdelapenya"
+    schedule:
+      interval: daily
+  - package-ecosystem: docker
+    assignees:
+      - "mdelapenya"
+    commit-message:
+      prefix: "deps:"
+    directory: "/"
+    labels:
+      - "dependencies"
+    reviewers:
+      - "mdelapenya"
+    schedule:
+      interval: daily
