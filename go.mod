@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.7.0
 	go.opentelemetry.io/otel/sdk/metric v0.27.0
 	go.opentelemetry.io/otel/trace v1.7.0
-	gotest.tools/gotestsum v1.7.0
+	gotest.tools/gotestsum v1.8.1
 )
 
 require (
