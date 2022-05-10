@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -47,12 +49,11 @@ func init() {
 	}
 }
 
-func createIntCounter(meter metric.Meter, name string, description string) metric.Int64Counter {
-	return metric.Must(meter).
-		NewInt64Counter(
-			name,
-			metric.WithDescription(description),
-		)
+func createIntCounter(meter metric.Meter, name string, description string) syncint64.Counter {
+	counter, _ := meter.SyncInt64().Counter(name, instrument.WithDescription(description))
+	// Accumulators always return nil errors
+	// see https://github.com/open-telemetry/opentelemetry-go/blob/e8fbfd3ec52d8153eea3f13465b7de15cd8f6320/sdk/metric/sdk.go#L256-L264
+	return counter
 }
 
 func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
