@@ -191,9 +191,19 @@ func Test_Main_SampleXML(t *testing.T) {
 				"4317/tcp",  // OTLP gRPC receiver
 				"55679/tcp", // zpages extension
 			},
-			BindMounts: map[string]string{
-				path.Join(workingDir, "testresources", "otel-collector-config.yml"): "/etc/otel/config.yaml",
-				reportFilePath: "/tmp/tests.json",
+			Mounts: testcontainers.ContainerMounts{
+				{
+					Source: testcontainers.GenericBindMountSource{
+						HostPath: path.Join(workingDir, "testresources", "otel-collector-config.yml"),
+					},
+					Target: "/etc/otel/config.yaml",
+				},
+				{
+					Source: testcontainers.GenericBindMountSource{
+						HostPath: reportFilePath,
+					},
+					Target: "/tmp/tests.json",
+				},
 			},
 		},
 		Started: true,
