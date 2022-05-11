@@ -1,5 +1,7 @@
 # junit2otlp
 
+[![Tests](https://github.com/mdelapenya/junit2otlp/actions/workflows/tests.yml/badge.svg)](https://github.com/mdelapenya/junit2otlp/actions/workflows/tests.yml)
+
 This simple CLI, written in Go, is sending jUnit metrics to a back-end using [Open Telemetry](https://opentelemetry.io).
 
 > Inspired by https://github.com/axw/test2otlp, which sends traces and spans for `go test` JSON events as they occur.
