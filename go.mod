@@ -6,7 +6,7 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/joshdk/go-junit v0.0.0-20210226021600-6145f504ca0d
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.3
 	github.com/testcontainers/testcontainers-go v0.13.0
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.30.0
