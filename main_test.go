@@ -329,31 +329,32 @@ func Test_GetServiceVariable(t *testing.T) {
 	var otlpTests = []struct {
 		fallback     string
 		getFn        func() string
-		setFlag      func()
+		setFlag      func(string)
 		otelVariable string
 	}{
 		{
 			fallback: Junit2otlp,
 			getFn:    getOtlpServiceName,
-			setFlag: func() {
-				serviceNameFlag = "this-is-a-flag"
+			setFlag: func(value string) {
+				serviceNameFlag = value
 			},
 			otelVariable: "OTEL_SERVICE_NAME",
 		},
 		{
 			fallback: "",
 			getFn:    getOtlpServiceVersion,
-			setFlag: func() {
-				serviceVersionFlag = "this-is-a-flag"
+			setFlag: func(value string) {
+				serviceVersionFlag = value
 			},
 			otelVariable: "OTEL_SERVICE_VERSION",
 		},
 	}
 
 	for _, otlpotlpTest := range otlpTests {
-		t.Run("Read "+otlpotlpTest.otelVariable+" from environment", func(t *testing.T) {
-			t.Run("Without environment variable retrieves fallback", func(t *testing.T) {
+		t.Run(otlpotlpTest.otelVariable, func(t *testing.T) {
+			t.Run("Without environment variable and no flag retrieves fallback", func(t *testing.T) {
 				os.Unsetenv(otlpotlpTest.otelVariable)
+				otlpotlpTest.setFlag("")
 				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
@@ -361,20 +362,19 @@ func Test_GetServiceVariable(t *testing.T) {
 				assert.Equal(t, otlpotlpTest.fallback, actualValue)
 			})
 
-			t.Run("With environment variable retrieves the variable", func(t *testing.T) {
+			t.Run("With environment variable and no flag retrieves the variable", func(t *testing.T) {
 				os.Setenv(otlpotlpTest.otelVariable, "foobar")
+				otlpotlpTest.setFlag("")
 				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
 				assert.Equal(t, "foobar", actualValue)
 			})
-		})
 
-		t.Run("Read "+otlpotlpTest.otelVariable+" from command line flag", func(t *testing.T) {
-			t.Run("Without environment variable retrieves the flag", func(t *testing.T) {
+			t.Run("Without environment variable and flag retrieves the flag", func(t *testing.T) {
 				os.Unsetenv(otlpotlpTest.otelVariable)
-				otlpotlpTest.setFlag()
+				otlpotlpTest.setFlag("this-is-a-flag")
 				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
@@ -382,15 +382,14 @@ func Test_GetServiceVariable(t *testing.T) {
 				assert.Equal(t, "this-is-a-flag", actualValue)
 			})
 
-			t.Run("With environment variable retrieves the variable", func(t *testing.T) {
+			t.Run("With environment variable and flag retrieves the flag", func(t *testing.T) {
 				os.Setenv(otlpotlpTest.otelVariable, "foobar")
-				otlpotlpTest.setFlag()
+				otlpotlpTest.setFlag("")
 				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
 				assert.Equal(t, "foobar", actualValue)
-				assert.Equal(t, "foobar", os.Getenv(otlpotlpTest.otelVariable))
 			})
 		})
 	}
