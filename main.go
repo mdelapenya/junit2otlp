@@ -38,7 +38,7 @@ var runtimeAttributes []attribute.KeyValue
 
 func init() {
 	flag.StringVar(&repositoryPathFlag, "repository-path", getDefaultwd(), "Path to the SCM repository to be read")
-	flag.StringVar(&serviceNameFlag, "service-name", Junit2otlp, "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&serviceNameFlag, "service-name", "", "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
 
@@ -138,24 +138,28 @@ func getDefaultwd() string {
 	return workingDir
 }
 
-// getOtlpEnvVar checks if the env variable, removing the OTEL prefix, needs to override
-func getOtlpEnvVar(key string, flag string) string {
+// getOtlpEnvVar the precedence order is: flag > env var > default
+func getOtlpEnvVar(key string, flag string, fallback string) string {
+	if flag != "" {
+		return flag
+	}
+
 	envVar := os.Getenv(key)
 	if envVar != "" {
 		return envVar
 	}
 
-	return flag
+	return fallback
 }
 
 // getOtlpServiceName checks the service name
 func getOtlpServiceName() string {
-	return getOtlpEnvVar("OTEL_SERVICE_NAME", serviceNameFlag)
+	return getOtlpEnvVar("OTEL_SERVICE_NAME", serviceNameFlag, Junit2otlp)
 }
 
 // getOtlpServiceVersion checks the service version
 func getOtlpServiceVersion() string {
-	return getOtlpEnvVar("OTEL_SERVICE_VERSION", serviceVersionFlag)
+	return getOtlpEnvVar("OTEL_SERVICE_VERSION", serviceVersionFlag, "")
 }
 
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
