@@ -138,13 +138,13 @@ func getDefaultwd() string {
 	return workingDir
 }
 
-// getOtlpEnvVar the precedence order is: flag > env var > default
-func getOtlpEnvVar(key string, flag string, fallback string) string {
+// getOtlpEnvVar the precedence order is: flag > env var > fallback
+func getOtlpEnvVar(flag string, envVarKey string, fallback string) string {
 	if flag != "" {
 		return flag
 	}
 
-	envVar := os.Getenv(key)
+	envVar := os.Getenv(envVarKey)
 	if envVar != "" {
 		return envVar
 	}
@@ -154,12 +154,12 @@ func getOtlpEnvVar(key string, flag string, fallback string) string {
 
 // getOtlpServiceName checks the service name
 func getOtlpServiceName() string {
-	return getOtlpEnvVar("OTEL_SERVICE_NAME", serviceNameFlag, Junit2otlp)
+	return getOtlpEnvVar(serviceNameFlag, "OTEL_SERVICE_NAME", Junit2otlp)
 }
 
 // getOtlpServiceVersion checks the service version
 func getOtlpServiceVersion() string {
-	return getOtlpEnvVar("OTEL_SERVICE_VERSION", serviceVersionFlag, "")
+	return getOtlpEnvVar(serviceVersionFlag, "OTEL_SERVICE_VERSION", "")
 }
 
 func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
