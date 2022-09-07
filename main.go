@@ -139,13 +139,13 @@ func getDefaultwd() string {
 }
 
 // getOtlpEnvVar checks if the env variable, removing the OTEL prefix, needs to override
-func getOtlpEnvVar(key string, fallback string) string {
+func getOtlpEnvVar(key string, flag string) string {
 	envVar := os.Getenv(key)
 	if envVar != "" {
 		return envVar
 	}
 
-	return fallback
+	return flag
 }
 
 // getOtlpServiceName checks the service name
