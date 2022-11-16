@@ -125,9 +125,7 @@ func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute
 	return TestAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
 }
 
-func Test_Main_SampleXML(t *testing.T) {
-	t.Setenv("BRANCH", "main")
-
+func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontainers.Container, testcontainers.Container, testcontainers.Network) {
 	ctx := context.Background()
 
 	// create file for otel to store the traces
@@ -221,6 +219,14 @@ func Test_Main_SampleXML(t *testing.T) {
 	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
 	t.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
 
+	return ctx, reportFilePath, otelCollector, jaeger, network
+}
+
+func Test_Main_SampleXML(t *testing.T) {
+	t.Setenv("BRANCH", "main")
+
+	ctx, reportFilePath, otelCollector, jaeger, network := setupRuntimeDependencies(t)
+
 	defer func() {
 		err := otelCollector.Terminate(ctx)
 		if err != nil {
@@ -240,7 +246,7 @@ func Test_Main_SampleXML(t *testing.T) {
 		os.Remove(reportFilePath)
 	}()
 
-	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
+	err := Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
 	if err != nil {
 		t.Error()
 	}
