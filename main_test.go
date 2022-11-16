@@ -126,10 +126,7 @@ func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute
 }
 
 func Test_Main_SampleXML(t *testing.T) {
-	os.Setenv("BRANCH", "main")
-	defer func() {
-		os.Unsetenv("BRANCH")
-	}()
+	t.Setenv("BRANCH", "main")
 
 	ctx := context.Background()
 
@@ -217,12 +214,12 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Errorf("could not get mapped port for otel-collector: %v", err)
 	}
 
-	os.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
-	os.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
-	os.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
+	t.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
+	t.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+	t.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
 
 	defer func() {
 		err := otelCollector.Terminate(ctx)
@@ -241,9 +238,6 @@ func Test_Main_SampleXML(t *testing.T) {
 
 		// clean up test report
 		os.Remove(reportFilePath)
-
-		// reset environment
-		os.Setenv(exporterEndpointKey, originalEndpoint)
 	}()
 
 	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
