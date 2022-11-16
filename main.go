@@ -29,6 +29,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const defaultMaxBatchSize = 10
+
 var repositoryPathFlag string
 var serviceNameFlag string
 var serviceVersionFlag string
@@ -198,7 +200,12 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
+		sdktrace.WithSpanProcessor(
+			sdktrace.NewBatchSpanProcessor(
+				traceExporter,
+				sdktrace.WithMaxExportBatchSize(defaultMaxBatchSize),
+			),
+		),
 	)
 	return tracerProvider, nil
 }
