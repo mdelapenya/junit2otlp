@@ -125,12 +125,7 @@ func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute
 	return TestAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
 }
 
-func Test_Main_SampleXML(t *testing.T) {
-	os.Setenv("BRANCH", "main")
-	defer func() {
-		os.Unsetenv("BRANCH")
-	}()
-
+func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontainers.Container, testcontainers.Container, testcontainers.Network) {
 	ctx := context.Background()
 
 	// create file for otel to store the traces
@@ -217,14 +212,25 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Errorf("could not get mapped port for otel-collector: %v", err)
 	}
 
-	os.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
-	os.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
-	os.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
+	t.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
+	t.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+	t.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
+
+	return ctx, reportFilePath, otelCollector, jaeger, network
+}
+
+func Test_Main_SampleXML(t *testing.T) {
+	t.Setenv("BRANCH", "main")
+	batchSizeFlag = 25
+
+	ctx, reportFilePath, otelCollector, jaeger, network := setupRuntimeDependencies(t)
 
 	defer func() {
+		batchSizeFlag = defaultMaxBatchSize
+
 		err := otelCollector.Terminate(ctx)
 		if err != nil {
 			t.Error(err)
@@ -241,12 +247,9 @@ func Test_Main_SampleXML(t *testing.T) {
 
 		// clean up test report
 		os.Remove(reportFilePath)
-
-		// reset environment
-		os.Setenv(exporterEndpointKey, originalEndpoint)
 	}()
 
-	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
+	err := Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
 	if err != nil {
 		t.Error()
 	}
