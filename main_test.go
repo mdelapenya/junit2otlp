@@ -224,10 +224,13 @@ func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontai
 
 func Test_Main_SampleXML(t *testing.T) {
 	t.Setenv("BRANCH", "main")
+	batchSizeFlag = 25
 
 	ctx, reportFilePath, otelCollector, jaeger, network := setupRuntimeDependencies(t)
 
 	defer func() {
+		batchSizeFlag = defaultMaxBatchSize
+
 		err := otelCollector.Terminate(ctx)
 		if err != nil {
 			t.Error(err)
