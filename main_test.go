@@ -264,8 +264,8 @@ func Test_Main_SampleXML(t *testing.T) {
 	// 4. assign each resource to the test report struct
 	content := string(jsonBytes)
 	jsons := strings.Split(content, "\n")
-	jsonSpans := strings.TrimSpace(jsons[0])
-	jsonMetrics := strings.TrimSpace(jsons[1])
+	jsonMetrics := strings.TrimSpace(jsons[0])
+	jsonSpans := strings.TrimSpace(jsons[1])
 
 	var resSpans ResourceSpans
 	err = json.Unmarshal([]byte(jsonSpans), &resSpans)
