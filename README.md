@@ -141,6 +141,7 @@ This tool is able to override the following attributes:
 
 | Attribute | Flag | Default value | Description |
 | --------- | ---- | ------------- | ----------- |
+| Max Batch Size | --batch-size | `10` | Maximum export batch size allowed when creating a BatchSpanProcessor. |
 | Repository Path | --repository-path | `.` | Path to the SCM repository to be read. |
 | Service Name | --service-name | `junit2otlp` | Overrides OpenTelemetry's service name. If the `OTEL_SERVICE_NAME` environment variable is set, it will take precedence over any other value. |
 | Service Version | --service-version | Empty | Overrides OpenTelemetry's service version. If the `OTEL_SERVICE_VERSION` environment variable is set, it will take precedence over any other value. |
