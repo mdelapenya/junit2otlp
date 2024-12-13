@@ -13,15 +13,11 @@ import (
 	"github.com/joshdk/go-junit"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -50,7 +46,7 @@ func init() {
 }
 
 func createIntCounter(meter metric.Meter, name string, description string) syncint64.Counter {
-	counter, _ := meter.SyncInt64().Counter(name, instrument.WithDescription(description))
+	counter, _ := meter.Int64Counter(name, instrument.WithDescription(description))
 	// Accumulators always return nil errors
 	// see https://github.com/open-telemetry/opentelemetry-go/blob/e8fbfd3ec52d8153eea3f13465b7de15cd8f6320/sdk/metric/sdk.go#L256-L264
 	return counter
@@ -58,7 +54,7 @@ func createIntCounter(meter metric.Meter, name string, description string) synci
 
 func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
 	tracer := tracesProvides.Tracer(srvName)
-	meter := global.Meter(srvName)
+	meter := otel.Meter(srvName)
 
 	scm := GetScm(repositoryPathFlag)
 	if scm != nil {
@@ -117,8 +113,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 				testAttributes = append(testAttributes, attribute.Key(TestError).String(test.Error.Error()))
 			}
 
-			_, testSpan := tracer.Start(ctx, test.Name,
-				trace.WithAttributes(testAttributes...))
+			_, testSpan := tracer.Start(ctx, test.Name, trace.WithAttributes(testAttributes...))
 			testSpan.End()
 		}
 
@@ -162,7 +157,7 @@ func getOtlpServiceVersion() string {
 	return getOtlpEnvVar(serviceVersionFlag, "OTEL_SERVICE_VERSION", "")
 }
 
-func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
+func initMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exporter, error) {
 	exp, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
@@ -171,7 +166,7 @@ func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
 	return exp, nil
 }
 
-func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter, res *resource.Resource) (*controller.Controller, error) {
+func initMetricsPusher(ctx context.Context, exporter *otlpmetricgrpc.Exporter, res *resource.Resource) (*controller.Controller, error) {
 	pusher := controller.New(
 		processor.NewFactory(
 			simple.NewWithHistogramDistribution(),
@@ -181,7 +176,7 @@ func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter, res *
 		controller.WithCollectPeriod(2*time.Second),
 		controller.WithResource(res),
 	)
-	global.SetMeterProvider(pusher)
+	otel.SetMeterProvider(pusher)
 
 	if err := pusher.Start(ctx); err != nil {
 		return nil, fmt.Errorf("could not start metric controller: %v", err)
