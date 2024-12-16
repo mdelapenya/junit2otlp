@@ -94,8 +94,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 		skippedCounter.Add(ctx, int64(totals.Skipped), metricAttributes)
 		testsCounter.Add(ctx, int64(totals.Tests), metricAttributes)
 
-		ctx, suiteSpan := tracer.Start(ctx, suite.Name,
-			trace.WithAttributes(suiteAttributes...))
+		ctx, suiteSpan := tracer.Start(ctx, suite.Name, trace.WithAttributes(suiteAttributes...))
 		for _, test := range suite.Tests {
 			testAttributes := []attribute.KeyValue{
 				semconv.CodeFunctionKey.String(test.Name),
@@ -158,21 +157,18 @@ func getOtlpServiceVersion() string {
 	return getOtlpEnvVar(serviceVersionFlag, "OTEL_SERVICE_VERSION", "")
 }
 
-func initMetricsExporter(ctx context.Context) (*otlpmetricgrpc.Exporter, error) {
-	exp, err := otlpmetricgrpc.New(ctx)
+func initMetricsProvider(ctx context.Context, res *resource.Resource) (*sdkmetric.MeterProvider, error) {
+	exporter, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
 	}
 
-	return exp, nil
-}
-
-func initMetricsProvider(ctx context.Context, exporter *otlpmetricgrpc.Exporter, res *resource.Resource) (*sdkmetric.MeterProvider, error) {
 	reader := sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(2*time.Second))
 	meterProvider := sdkmetric.NewMeterProvider(
 		sdkmetric.WithReader(reader),
 		sdkmetric.WithResource(res),
 	)
+
 	otel.SetMeterProvider(meterProvider)
 
 	// pusher := controller.New(
@@ -203,6 +199,9 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
 	)
+
+	otel.SetTracerProvider(tracerProvider)
+
 	return tracerProvider, nil
 }
 
@@ -264,19 +263,7 @@ func Main(ctx context.Context, reader InputReader) error {
 	}
 	defer tracesProvides.Shutdown(ctx)
 
-	metricsExporter, err := initMetricsExporter(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to initialise metrics exporter: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := metricsExporter.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	provider, err := initMetricsProvider(ctx, metricsExporter, res)
+	provider, err := initMetricsProvider(ctx, res)
 	if err != nil {
 		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
