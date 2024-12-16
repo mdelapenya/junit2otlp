@@ -171,21 +171,6 @@ func initMetricsProvider(ctx context.Context, res *resource.Resource) (*sdkmetri
 
 	otel.SetMeterProvider(meterProvider)
 
-	// pusher := controller.New(
-	// 	processor.NewFactory(
-	// 		simple.NewWithHistogramDistribution(),
-	// 		exporter,
-	// 	),
-	// 	controller.WithExporter(exporter),
-	// 	controller.WithCollectPeriod(2*time.Second),
-	// 	controller.WithResource(res),
-	// )
-	// otel.SetMeterProvider(pusher)
-
-	// if err := pusher.Start(ctx); err != nil {
-	// 	return nil, fmt.Errorf("could not start metric controller: %v", err)
-	// }
-
 	return meterProvider, nil
 }
 
