@@ -212,15 +212,18 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Error(err)
 	}
 
-	ports, err := otelCollector.Ports(ctx)
-	if err != nil {
-		t.Error(err)
-	}
-
-	fmt.Printf("ports: %v", ports)
-
 	collectorPort, err := otelCollector.MappedPort(ctx, "4317/tcp")
 	if err != nil {
+		ports, portErr := otelCollector.Ports(ctx)
+		if portErr != nil {
+			fmt.Printf("could not get ports for otel-collector: %v", portErr)
+			t.Errorf("could not get ports for otel-collector: %v", portErr)
+		}
+
+		for _, port := range ports {
+			fmt.Printf("port: %s\n", port)
+		}
+
 		t.Errorf("could not get mapped port for otel-collector: %v", err)
 	}
 
@@ -274,7 +277,7 @@ func Test_Main_SampleXML(t *testing.T) {
 	// 4. assign each resource to the test report struct
 	content := string(jsonBytes)
 
-	jsons := strings.Split(content, "\n")
+	jsons := strings.Split(strings.TrimSpace(content), "\n")
 	if len(jsons) != 2 {
 		t.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
 	}
