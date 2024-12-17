@@ -1,6 +1,6 @@
 module github.com/mdelapenya/junit2otlp
 
-go 1.22.7
+go 1.23
 
 require (
 	github.com/go-git/go-git/v5 v5.4.2
