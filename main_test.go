@@ -319,7 +319,7 @@ func Test_GetServiceVariable(t *testing.T) {
 	for _, otlpotlpTest := range otlpTests {
 		t.Run(otlpotlpTest.otelVariable, func(t *testing.T) {
 			t.Run("Without environment variable and no flag retrieves fallback", func(t *testing.T) {
-				os.Unsetenv(otlpotlpTest.otelVariable)
+				t.Setenv(otlpotlpTest.otelVariable, "")
 				otlpotlpTest.setFlag("")
 
 				actualValue := otlpotlpTest.getFn()
@@ -337,7 +337,7 @@ func Test_GetServiceVariable(t *testing.T) {
 			})
 
 			t.Run("Without environment variable and flag retrieves the flag", func(t *testing.T) {
-				os.Unsetenv(otlpotlpTest.otelVariable)
+				t.Setenv(otlpotlpTest.otelVariable, "")
 				otlpotlpTest.setFlag("this-is-a-flag")
 
 				actualValue := otlpotlpTest.getFn()

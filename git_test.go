@@ -208,11 +208,7 @@ func (r *FakeGitRepo) read() *GitScm {
 }
 
 func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -240,13 +236,8 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{Depth: 1})).read()
 			if scm == nil {
@@ -267,11 +258,7 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -303,13 +290,8 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -345,11 +327,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForBranches(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -377,13 +355,8 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 			if scm == nil {
@@ -418,11 +391,7 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 }
 
 func TestGit_ContributeCommitters(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	branchName := "this-is-a-test-branch"
 
@@ -454,13 +423,8 @@ func TestGit_ContributeCommitters(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -490,11 +454,7 @@ func TestGit_ContributeCommitters(t *testing.T) {
 }
 
 func TestGit_ContributeFilesAndLines(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	branchName := "this-is-a-test-branch"
 
@@ -526,13 +486,8 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -564,11 +519,7 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	branchName := "this-is-a-test-branch"
 
@@ -600,13 +551,8 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -629,11 +575,7 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForBranches(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -661,13 +603,8 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 			if scm == nil {
