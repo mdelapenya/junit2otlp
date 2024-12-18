@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/network"
 )
 
 const exporterEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT"
@@ -154,16 +156,13 @@ func Test_Main_SampleXML(t *testing.T) {
 	defer reportFile.Close()
 
 	// create docker network for the containers
-	networkName := "jaeger-integration-tests"
-
-	network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-		NetworkRequest: testcontainers.NetworkRequest{
-			Name: networkName,
-		},
-	})
+	nw, err := network.New(ctx)
+	testcontainers.CleanupNetwork(t, nw)
 	if err != nil {
 		t.Error(err)
 	}
+
+	networkName := nw.Name
 
 	jaeger, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
@@ -177,6 +176,7 @@ func Test_Main_SampleXML(t *testing.T) {
 		},
 		Started: true,
 	})
+	testcontainers.CleanupContainer(t, jaeger)
 	if err != nil {
 		t.Error(err)
 	}
@@ -190,23 +190,20 @@ func Test_Main_SampleXML(t *testing.T) {
 				"4317/tcp",  // OTLP gRPC receiver
 				"55679/tcp", // zpages extension
 			},
-			Mounts: testcontainers.ContainerMounts{
+			Files: []testcontainers.ContainerFile{
 				{
-					Source: testcontainers.GenericBindMountSource{
-						HostPath: path.Join(workingDir, "testresources", "otel-collector-config.yml"),
-					},
-					Target: "/etc/otel/config.yaml",
+					ContainerFilePath: "/etc/otel/config.yaml",
+					HostFilePath:      path.Join(workingDir, "testresources", "otel-collector-config.yml"),
 				},
 				{
-					Source: testcontainers.GenericBindMountSource{
-						HostPath: reportFilePath,
-					},
-					Target: "/tmp/tests.json",
+					Reader:            reportFile,
+					ContainerFilePath: "/tmp/tests.json",
 				},
 			},
 		},
 		Started: true,
 	})
+	testcontainers.CleanupContainer(t, otelCollector)
 	if err != nil {
 		t.Error(err)
 	}
@@ -224,20 +221,6 @@ func Test_Main_SampleXML(t *testing.T) {
 	os.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
 
 	defer func() {
-		err := otelCollector.Terminate(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		err = jaeger.Terminate(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		// clean up network
-		err = network.Remove(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-
 		// clean up test report
 		os.Remove(reportFilePath)
 
@@ -253,8 +236,14 @@ func Test_Main_SampleXML(t *testing.T) {
 	// TODO: retry until the file is written by the otel-exporter
 	time.Sleep(time.Second * 30)
 
+	rc, err := otelCollector.CopyFileFromContainer(ctx, "/tmp/tests.json")
+	if err != nil {
+		t.Error(err)
+	}
+	defer rc.Close()
+
 	// assert using the generated file
-	jsonBytes, err := os.ReadFile(reportFilePath)
+	jsonBytes, err := io.ReadAll(rc)
 	if err != nil {
 		t.Error(err)
 	}
