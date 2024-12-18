@@ -9,8 +9,9 @@ import (
 	"path"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/avast/retry-go"
+	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 )
@@ -212,9 +213,17 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Error(err)
 	}
 
-	collectorPort, err := otelCollector.MappedPort(ctx, "4317/tcp")
+	var collectorPort nat.Port
+	err = retry.Do(func() error {
+		collectorPort, err = otelCollector.MappedPort(ctx, "4317/tcp")
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
-		t.Errorf("could not get mapped port for otel-collector: %v", err)
+		t.Errorf("could not get the collector port: %s", err)
 	}
 
 	os.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
@@ -251,25 +260,31 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Error()
 	}
 
-	// TODO: retry until the file is written by the otel-exporter
-	time.Sleep(time.Second * 30)
-
-	// assert using the generated file
-	jsonBytes, err := os.ReadFile(reportFilePath)
-	if err != nil {
-		t.Error(err)
-	}
-
 	// merge both JSON files
 	// 1. get the spans and metrics JSONs, they are separated by \n
 	// 2. remote white spaces
 	// 3. unmarshal each resource separately
 	// 4. assign each resource to the test report struct
-	content := string(jsonBytes)
 
-	jsons := strings.Split(strings.TrimSpace(content), "\n")
-	if len(jsons) != 2 {
-		t.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
+	var jsons []string
+	err = retry.Do(func() error {
+		// assert using the generated file
+		jsonBytes, err := os.ReadFile(reportFilePath)
+		if err != nil {
+			t.Error(err)
+		}
+
+		content := string(jsonBytes)
+
+		jsons = strings.Split(strings.TrimSpace(content), "\n")
+		if len(jsons) != 2 {
+			return fmt.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Errorf("error while waiting for collector output: %s", err)
 	}
 
 	jsonSpans := ""
