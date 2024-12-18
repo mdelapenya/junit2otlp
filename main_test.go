@@ -18,16 +18,6 @@ import (
 
 const exporterEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT"
 
-var originalEnvVar string
-var originalServiceNameFlag string
-var originalEndpoint string
-
-func init() {
-	originalEndpoint = os.Getenv(exporterEndpointKey)
-	originalEnvVar = os.Getenv("OTEL_SERVICE_NAME")
-	originalServiceNameFlag = serviceNameFlag
-}
-
 type TestReader struct {
 	testFile string
 }
@@ -127,28 +117,14 @@ func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute
 }
 
 func Test_Main_SampleXML(t *testing.T) {
-	os.Setenv("BRANCH", "main")
-	defer func() {
-		os.Unsetenv("BRANCH")
-	}()
+	t.Setenv("BRANCH", "main")
 
 	ctx := context.Background()
 
 	// create file for otel to store the traces
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
+	tmpDir := t.TempDir()
 
-	buildDir := path.Join(workingDir, "build")
-	if _, err := os.Stat(buildDir); os.IsNotExist(err) {
-		err = os.Mkdir(buildDir, 0755)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-
-	reportFilePath := path.Join(buildDir, "otel-collector.json")
+	reportFilePath := path.Join(tmpDir, "otel-collector.json")
 	reportFile, err := os.Create(reportFilePath)
 	if err != nil {
 		t.Error(err)
@@ -193,7 +169,7 @@ func Test_Main_SampleXML(t *testing.T) {
 			Files: []testcontainers.ContainerFile{
 				{
 					ContainerFilePath: "/etc/otel/config.yaml",
-					HostFilePath:      path.Join(workingDir, "testresources", "otel-collector-config.yml"),
+					HostFilePath:      path.Join("testresources", "otel-collector-config.yml"),
 				},
 				{
 					Reader:            reportFile,
@@ -213,19 +189,16 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Errorf("could not get mapped port for otel-collector: %v", err)
 	}
 
-	os.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
-	os.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
-	os.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
+	t.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
+	t.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+	t.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
 
 	defer func() {
 		// clean up test report
 		os.Remove(reportFilePath)
-
-		// reset environment
-		os.Setenv(exporterEndpointKey, originalEndpoint)
 	}()
 
 	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
@@ -360,7 +333,6 @@ func Test_GetServiceVariable(t *testing.T) {
 			t.Run("Without environment variable and no flag retrieves fallback", func(t *testing.T) {
 				os.Unsetenv(otlpotlpTest.otelVariable)
 				otlpotlpTest.setFlag("")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
@@ -368,9 +340,8 @@ func Test_GetServiceVariable(t *testing.T) {
 			})
 
 			t.Run("With environment variable and no flag retrieves the variable", func(t *testing.T) {
-				os.Setenv(otlpotlpTest.otelVariable, "foobar")
+				t.Setenv(otlpotlpTest.otelVariable, "foobar")
 				otlpotlpTest.setFlag("")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
@@ -380,7 +351,6 @@ func Test_GetServiceVariable(t *testing.T) {
 			t.Run("Without environment variable and flag retrieves the flag", func(t *testing.T) {
 				os.Unsetenv(otlpotlpTest.otelVariable)
 				otlpotlpTest.setFlag("this-is-a-flag")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
@@ -388,9 +358,8 @@ func Test_GetServiceVariable(t *testing.T) {
 			})
 
 			t.Run("With environment variable and flag retrieves the flag", func(t *testing.T) {
-				os.Setenv(otlpotlpTest.otelVariable, "foobar")
+				t.Setenv(otlpotlpTest.otelVariable, "foobar")
 				otlpotlpTest.setFlag("")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
@@ -398,10 +367,4 @@ func Test_GetServiceVariable(t *testing.T) {
 			})
 		})
 	}
-}
-
-func resetEnvironment(otelVariable string) {
-	os.Setenv(otelVariable, originalEnvVar)
-
-	serviceNameFlag = originalServiceNameFlag
 }
