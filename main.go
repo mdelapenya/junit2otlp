@@ -31,6 +31,8 @@ var serviceVersionFlag string
 var traceNameFlag string
 var propertiesAllowedString string
 
+const propertiesAllowAll = "all"
+
 var runtimeAttributes []attribute.KeyValue
 var propsAllowed []string
 
@@ -39,7 +41,7 @@ func init() {
 	flag.StringVar(&serviceNameFlag, "service-name", "", "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
-	flag.StringVar(&propertiesAllowedString, "properties-allowed", "", "Comma separated list of properties to be allowed in the jUnit report")
+	flag.StringVar(&propertiesAllowedString, "properties-allowed", propertiesAllowAll, "Comma separated list of properties to be allowed in the jUnit report")
 
 	// initialize runtime keys
 	runtimeAttributes = []attribute.KeyValue{
@@ -97,9 +99,9 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 		suiteAttributes := []attribute.KeyValue{
 			semconv.CodeNamespaceKey.String(suite.Package),
 			attribute.Key(TestsSuiteName).String(suite.Name),
-			// attribute.Key(TestsSystemErr).String(suite.SystemErr),
-			// attribute.Key(TestsSystemOut).String(suite.SystemOut),
-			//attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
+			attribute.Key(TestsSystemErr).String(suite.SystemErr),
+			attribute.Key(TestsSystemOut).String(suite.SystemOut),
+			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
 		}
 
 		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
@@ -214,8 +216,10 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 func propsToLabels(props map[string]string) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{}
 	for k, v := range props {
-		// when an allow list is provided, only include the properties that are in the list
-		if len(propsAllowed) > 0 && !slices.Contains(propsAllowed, k) {
+		// if propertiesAllowedString is not "all" (default) and the key is not in the
+		// allowed list, skip it
+		if propertiesAllowedString != propertiesAllowAll &&
+			len(propsAllowed) > 0 && !slices.Contains(propsAllowed, k) {
 			continue
 		}
 
