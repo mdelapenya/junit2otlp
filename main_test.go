@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const exporterEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT"
@@ -203,25 +205,26 @@ func Test_Main_SampleXML(t *testing.T) {
 	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
 	require.NoError(t, err)
 
-	// TODO: retry until the file is written by the otel-exporter
-	time.Sleep(time.Second * 30)
-
-	rc, err := otelCollector.CopyFileFromContainer(ctx, "/tmp/tests.json")
+	// wait for the file to be written by the otel-exporter
+	var out bytes.Buffer
+	err = wait.ForFile("/tmp/tests.json").
+		WithStartupTimeout(time.Second*10).
+		WithPollInterval(time.Second).
+		WithMatcher(func(r io.Reader) error {
+			if _, err := io.Copy(&out, r); err != nil {
+				return fmt.Errorf("copy: %w", err)
+			}
+			return nil
+		}).WaitUntilReady(ctx, otelCollector)
 	require.NoError(t, err)
-	defer rc.Close()
 
 	// assert using the generated file
-	jsonBytes, err := io.ReadAll(rc)
-	require.NoError(t, err)
-
 	// merge both JSON files
 	// 1. get the spans and metrics JSONs, they are separated by \n
 	// 2. remote white spaces
 	// 3. unmarshal each resource separately
 	// 4. assign each resource to the test report struct
-	content := string(jsonBytes)
-
-	jsons := strings.Split(strings.TrimSpace(content), "\n")
+	jsons := strings.Split(strings.TrimSpace(out.String()), "\n")
 	if len(jsons) != 2 {
 		t.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
 	}
