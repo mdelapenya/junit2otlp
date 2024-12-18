@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -32,7 +31,7 @@ type TestReader struct {
 }
 
 func (tr *TestReader) Read() ([]byte, error) {
-	b, err := ioutil.ReadFile(tr.testFile)
+	b, err := os.ReadFile(tr.testFile)
 	if err != nil {
 		return []byte{}, err
 	}
