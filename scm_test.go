@@ -1,60 +1,25 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestCheckGitContext(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	originalGitlabBranch := os.Getenv("CI_COMMIT_BRANCH")
-
-	unsetGithub := func() {
-		os.Setenv("GITHUB_SHA", "")
-	}
-	unsetLocal := func() {
-		os.Setenv("BRANCH", "")
-		os.Setenv("TARGET_BRANCH", "")
-	}
-
-	restoreSCMContextsFn := func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-		os.Setenv("CI_COMMIT_BRANCH", originalGitlabBranch)
-	}
-
 	t.Run("Github", func(t *testing.T) {
-		unsetLocal()
-		// Prepare Github
-		originalBaseRef := os.Getenv("GITHUB_BASE_REF")
-		originalHeadRef := os.Getenv("GITHUB_HEAD_REF")
-		originalRefName := os.Getenv("GITHUB_REF_NAME")
-		restoreGithubFn := func() {
-			restoreSCMContextsFn()
-			os.Setenv("GITHUB_BASE_REF", originalBaseRef)
-			os.Setenv("GITHUB_HEAD_REF", originalHeadRef)
-			os.Setenv("GITHUB_REF_NAME", originalRefName)
-		}
-
-		if originalGitlabBranch != "" {
-			t.Skip("Tests skipped when running on Gitlab")
-		}
+		// Disable Local
+		t.Setenv("BRANCH", "")
 
 		testSha := "0123456"
 		testBaseRef := "main"
 		testHeadRef := "feature/pr-23"
-		if originalGithubSha != "" {
-			testSha = originalGithubSha
-		}
 
 		t.Run("Running for Branches", func(t *testing.T) {
-			unsetLocal()
-			os.Setenv("GITHUB_SHA", testSha)
-			os.Setenv("GITHUB_REF_NAME", testHeadRef)
-			os.Setenv("GITHUB_BASE_REF", "") // only for pull requests
-			os.Setenv("GITHUB_HEAD_REF", "") // only for pull requests
-			defer restoreGithubFn()
+			t.Setenv("GITHUB_SHA", testSha)
+			t.Setenv("GITHUB_REF_NAME", testHeadRef)
+			t.Setenv("GITHUB_BASE_REF", "") // only for pull requests
+			t.Setenv("GITHUB_HEAD_REF", "") // only for pull requests
 
 			gitCtx := checkGitContext()
 			require.Equal(t, testSha, gitCtx.Commit)
@@ -65,12 +30,10 @@ func TestCheckGitContext(t *testing.T) {
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
-			unsetLocal()
-			os.Setenv("GITHUB_SHA", testSha)
-			os.Setenv("GITHUB_REF_NAME", testHeadRef)
-			os.Setenv("GITHUB_BASE_REF", testBaseRef)
-			os.Setenv("GITHUB_HEAD_REF", testHeadRef)
-			defer restoreGithubFn()
+			t.Setenv("GITHUB_SHA", testSha)
+			t.Setenv("GITHUB_REF_NAME", testHeadRef)
+			t.Setenv("GITHUB_BASE_REF", testBaseRef)
+			t.Setenv("GITHUB_HEAD_REF", testHeadRef)
 
 			gitCtx := checkGitContext()
 			require.Equal(t, testSha, gitCtx.Commit)
@@ -82,33 +45,19 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Jenkins", func(t *testing.T) {
-		// prepare Jenkins
-		jenkinsChangeID := os.Getenv("CHANGE_ID")
-		jenkinsGitCommit := os.Getenv("GIT_COMMIT")
-		jenkinsChangeBranchName := os.Getenv("BRANCH_NAME")
-		jenkinsChangeTargetName := os.Getenv("CHANGE_TARGET")
-		jenkinsURL := os.Getenv("JENKINS_URL")
-		restoreJenkinsFn := func() {
-			restoreSCMContextsFn()
-			os.Setenv("CHANGE_ID", jenkinsChangeID)
-			os.Setenv("GIT_COMMIT", jenkinsGitCommit)
-			os.Setenv("BRANCH_NAME", jenkinsChangeBranchName)
-			os.Setenv("CHANGE_TARGET", jenkinsChangeTargetName)
-			os.Setenv("JENKINS_URL", jenkinsURL)
-		}
-
 		testSha := "0123456"
 		testBranch := "mybranch"
 
+		// Disable Local and Github
+		t.Setenv("BRANCH", "")
+		t.Setenv("GITHUB_SHA", "")
+
 		t.Run("Running for Branches", func(t *testing.T) {
-			unsetLocal()
-			unsetGithub()
-			os.Setenv("JENKINS_URL", "http://jenkins.local")
-			os.Setenv("GIT_COMMIT", testSha)
-			os.Setenv("CHANGE_ID", "")
-			os.Setenv("CHANGE_TARGET", "")
-			os.Setenv("BRANCH_NAME", testBranch)
-			defer restoreJenkinsFn()
+			t.Setenv("JENKINS_URL", "http://jenkins.local")
+			t.Setenv("GIT_COMMIT", testSha)
+			t.Setenv("CHANGE_ID", "")
+			t.Setenv("CHANGE_TARGET", "")
+			t.Setenv("BRANCH_NAME", testBranch)
 
 			gitCtx := checkGitContext()
 			require.Equal(t, testSha, gitCtx.Commit)
@@ -119,14 +68,11 @@ func TestCheckGitContext(t *testing.T) {
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
-			unsetLocal()
-			unsetGithub()
-			os.Setenv("JENKINS_URL", "http://jenkins.local")
-			os.Setenv("GIT_COMMIT", testSha)
-			os.Setenv("CHANGE_ID", "PR-123")
-			os.Setenv("CHANGE_TARGET", "main")
-			os.Setenv("BRANCH_NAME", testBranch)
-			defer restoreJenkinsFn()
+			t.Setenv("JENKINS_URL", "http://jenkins.local")
+			t.Setenv("GIT_COMMIT", testSha)
+			t.Setenv("CHANGE_ID", "PR-123")
+			t.Setenv("CHANGE_TARGET", "main")
+			t.Setenv("BRANCH_NAME", testBranch)
 
 			gitCtx := checkGitContext()
 			require.Equal(t, testSha, gitCtx.Commit)
@@ -138,25 +84,16 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Gitlab", func(t *testing.T) {
-		// prepare Gitlab
-		gitlabRefName := os.Getenv("CI_COMMIT_REF_NAME")
-		originalSourceBranchSha := os.Getenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")
-		originalTargetBranchName := os.Getenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME")
-		restoreGitlabFn := func() {
-			restoreSCMContextsFn()
-			os.Setenv("CI_COMMIT_REF_NAME", gitlabRefName)
-			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", originalSourceBranchSha)
-			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", originalTargetBranchName)
-		}
+		// Disable Local, Github and Jenkins
+		t.Setenv("BRANCH", "")
+		t.Setenv("GITHUB_SHA", "")
+		t.Setenv("JENKINS_URL", "")
 
 		t.Run("Running for Branches", func(t *testing.T) {
-			unsetLocal()
-			unsetGithub()
-			os.Setenv("CI_COMMIT_BRANCH", "branch")
-			os.Setenv("CI_COMMIT_REF_NAME", "branch")
-			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
-			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-			defer restoreGitlabFn()
+			t.Setenv("CI_COMMIT_BRANCH", "branch")
+			t.Setenv("CI_COMMIT_REF_NAME", "branch")
+			t.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
+			t.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 
 			gitCtx := checkGitContext()
 			require.Equal(t, "0123456", gitCtx.Commit)
@@ -167,12 +104,9 @@ func TestCheckGitContext(t *testing.T) {
 		})
 
 		t.Run("Running for Merge Requests", func(t *testing.T) {
-			unsetLocal()
-			unsetGithub()
-			os.Setenv("CI_COMMIT_REF_NAME", "branch")
-			os.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
-			os.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
-			defer restoreGitlabFn()
+			t.Setenv("CI_COMMIT_REF_NAME", "branch")
+			t.Setenv("CI_MERGE_REQUEST_SOURCE_BRANCH_SHA", "0123456")
+			t.Setenv("CI_MERGE_REQUEST_TARGET_BRANCH_NAME", "main")
 
 			gitCtx := checkGitContext()
 			require.Equal(t, "0123456", gitCtx.Commit)
@@ -185,12 +119,8 @@ func TestCheckGitContext(t *testing.T) {
 
 	t.Run("Local machine", func(t *testing.T) {
 		t.Run("Running with TARGET_BRANCH", func(t *testing.T) {
-			unsetGithub()
-			os.Setenv("BRANCH", "foo")
-			os.Setenv("TARGET_BRANCH", "main")
-			defer os.Unsetenv("TARGET_BRANCH")
-			defer os.Unsetenv("BRANCH")
-			defer restoreSCMContextsFn()
+			t.Setenv("BRANCH", "foo")
+			t.Setenv("TARGET_BRANCH", "main")
 
 			gitCtx := checkGitContext()
 			require.Equal(t, "", gitCtx.Commit)
@@ -201,10 +131,7 @@ func TestCheckGitContext(t *testing.T) {
 		})
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
-			unsetGithub()
-			os.Setenv("BRANCH", "foo")
-			defer os.Unsetenv("BRANCH")
-			defer restoreSCMContextsFn()
+			t.Setenv("BRANCH", "foo")
 
 			gitCtx := checkGitContext()
 			require.Equal(t, "", gitCtx.Commit)
@@ -216,10 +143,6 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Empty SCM context", func(t *testing.T) {
-		unsetLocal()
-		unsetGithub()
-		defer restoreSCMContextsFn()
-
 		gitCtx := checkGitContext()
 		require.Nil(t, gitCtx)
 	})
