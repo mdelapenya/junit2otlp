@@ -263,11 +263,17 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	resourceSpans := testReport.resourceSpans.Spans[0]
 
-	srvNameAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
+	srvNameAttribute, err := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
+	if err != nil {
+		t.Error(err)
+	}
 	assert.Equal(t, "service.name", srvNameAttribute.Key)
 	assertStringValueInAttribute(t, srvNameAttribute.Value, "jaeger-srv-test")
 
-	srvVersionAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
+	srvVersionAttribute, err := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
+	if err != nil {
+		t.Error(err)
+	}
 	assert.Equal(t, "service.version", srvVersionAttribute.Key)
 	assertStringValueInAttribute(t, srvVersionAttribute.Value, "")
 
@@ -289,13 +295,22 @@ func Test_Main_SampleXML(t *testing.T) {
 	assert.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
 	assert.Equal(t, "SPAN_KIND_INTERNAL", aTestCase.Kind)
 
-	codeFunction, _ := findAttributeInArray(aTestCase.Attributes, "code.function")
+	codeFunction, err := findAttributeInArray(aTestCase.Attributes, "code.function")
+	if err != nil {
+		t.Error(err)
+	}
 	assertStringValueInAttribute(t, codeFunction.Value, "TestCheckConfigDirsCreatesWorkspaceAtHome")
 
-	testClassName, _ := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
+	testClassName, err := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
+	if err != nil {
+		t.Error(err)
+	}
 	assertStringValueInAttribute(t, testClassName.Value, "github.com/elastic/e2e-testing/cli/config")
 
-	goVersion, _ := findAttributeInArray(aTestCase.Attributes, "go.version")
+	goVersion, err := findAttributeInArray(aTestCase.Attributes, "go.version")
+	if err != nil {
+		t.Error(err)
+	}
 	assertStringValueInAttribute(t, goVersion.Value, "go1.16.3 linux/amd64")
 
 	// last span is server type
