@@ -626,6 +626,8 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 }
 
 func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			return true
@@ -636,6 +638,8 @@ func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
 }
 
 func keyExistsWithBoolValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...bool) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {
@@ -657,6 +661,8 @@ func keyExistsWithBoolValue(t *testing.T, attributes []attribute.KeyValue, key s
 }
 
 func keyExistsWithIntValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...int64) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {
@@ -678,6 +684,8 @@ func keyExistsWithIntValue(t *testing.T, attributes []attribute.KeyValue, key st
 }
 
 func keyExistsWithValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...string) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {

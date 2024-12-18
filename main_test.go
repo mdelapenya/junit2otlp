@@ -104,6 +104,8 @@ type TestReport struct {
 }
 
 func assertStringValueInAttribute(t *testing.T, att TestAttributeValue, expected string) {
+	t.Helper()
+
 	require.Equal(t, expected, att.StringValue)
 }
 
