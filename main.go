@@ -88,14 +88,6 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	for _, suite := range suites {
 		totals := suite.Totals
 
-		fmt.Printf("Suite: %s\n", suite.Name)
-		fmt.Printf("Duration: %s\n", totals.Duration)
-		fmt.Printf("Error: %d\n", totals.Error)
-		fmt.Printf("Failed: %d\n", totals.Failed)
-		fmt.Printf("Passed: %d\n", totals.Passed)
-		fmt.Printf("Skipped: %d\n", totals.Skipped)
-		fmt.Printf("Tests: %d\n", totals.Tests)
-
 		suiteAttributes := []attribute.KeyValue{
 			semconv.CodeNamespaceKey.String(suite.Package),
 			attribute.Key(TestsSuiteName).String(suite.Name),
