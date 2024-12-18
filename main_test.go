@@ -318,7 +318,7 @@ func Test_GetServiceVariable(t *testing.T) {
 
 	for _, otlpotlpTest := range otlpTests {
 		t.Run(otlpotlpTest.otelVariable, func(t *testing.T) {
-			t.Run("Without environment variable and no flag retrieves fallback", func(t *testing.T) {
+			t.Run("no-env/no-flag/fallback", func(t *testing.T) {
 				t.Setenv(otlpotlpTest.otelVariable, "")
 				otlpotlpTest.setFlag("")
 
@@ -327,7 +327,7 @@ func Test_GetServiceVariable(t *testing.T) {
 				require.Equal(t, otlpotlpTest.fallback, actualValue)
 			})
 
-			t.Run("With environment variable and no flag retrieves the variable", func(t *testing.T) {
+			t.Run("env/no-flag/env", func(t *testing.T) {
 				t.Setenv(otlpotlpTest.otelVariable, "foobar")
 				otlpotlpTest.setFlag("")
 
@@ -336,7 +336,7 @@ func Test_GetServiceVariable(t *testing.T) {
 				require.Equal(t, "foobar", actualValue)
 			})
 
-			t.Run("Without environment variable and flag retrieves the flag", func(t *testing.T) {
+			t.Run("no-env/flag/flag", func(t *testing.T) {
 				t.Setenv(otlpotlpTest.otelVariable, "")
 				otlpotlpTest.setFlag("this-is-a-flag")
 
@@ -345,13 +345,13 @@ func Test_GetServiceVariable(t *testing.T) {
 				require.Equal(t, "this-is-a-flag", actualValue)
 			})
 
-			t.Run("With environment variable and flag retrieves the flag", func(t *testing.T) {
+			t.Run("env/flag/flag", func(t *testing.T) {
 				t.Setenv(otlpotlpTest.otelVariable, "foobar")
-				otlpotlpTest.setFlag("")
+				otlpotlpTest.setFlag("this-is-a-flag")
 
 				actualValue := otlpotlpTest.getFn()
 
-				require.Equal(t, "foobar", actualValue)
+				require.Equal(t, "this-is-a-flag", actualValue)
 			})
 		})
 	}
