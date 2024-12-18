@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -124,7 +124,7 @@ func Test_Main_SampleXML(t *testing.T) {
 	// create file for otel to store the traces
 	tmpDir := t.TempDir()
 
-	reportFilePath := path.Join(tmpDir, "otel-collector.json")
+	reportFilePath := filepath.Join(tmpDir, "otel-collector.json")
 	reportFile, err := os.Create(reportFilePath)
 	if err != nil {
 		t.Error(err)
@@ -169,7 +169,7 @@ func Test_Main_SampleXML(t *testing.T) {
 			Files: []testcontainers.ContainerFile{
 				{
 					ContainerFilePath: "/etc/otel/config.yaml",
-					HostFilePath:      path.Join("testresources", "otel-collector-config.yml"),
+					HostFilePath:      filepath.Join("testresources", "otel-collector-config.yml"),
 				},
 				{
 					Reader:            reportFile,
