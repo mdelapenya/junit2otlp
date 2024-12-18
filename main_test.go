@@ -11,7 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 )
@@ -103,7 +104,7 @@ type TestReport struct {
 }
 
 func assertStringValueInAttribute(t *testing.T, att TestAttributeValue, expected string) {
-	assert.Equal(t, expected, att.StringValue)
+	require.Equal(t, expected, att.StringValue)
 }
 
 func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute, error) {
@@ -126,17 +127,13 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	reportFilePath := filepath.Join(tmpDir, "otel-collector.json")
 	reportFile, err := os.Create(reportFilePath)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	defer reportFile.Close()
 
 	// create docker network for the containers
 	nw, err := network.New(ctx)
 	testcontainers.CleanupNetwork(t, nw)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	networkName := nw.Name
 
@@ -153,9 +150,7 @@ func Test_Main_SampleXML(t *testing.T) {
 		Started: true,
 	})
 	testcontainers.CleanupContainer(t, jaeger)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	otelCollector, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
@@ -180,9 +175,7 @@ func Test_Main_SampleXML(t *testing.T) {
 		Started: true,
 	})
 	testcontainers.CleanupContainer(t, otelCollector)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	collectorPort, err := otelCollector.MappedPort(ctx, "4317/tcp")
 	if err != nil {
@@ -202,24 +195,18 @@ func Test_Main_SampleXML(t *testing.T) {
 	}()
 
 	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
-	if err != nil {
-		t.Error()
-	}
+	require.NoError(t, err)
 
 	// TODO: retry until the file is written by the otel-exporter
 	time.Sleep(time.Second * 30)
 
 	rc, err := otelCollector.CopyFileFromContainer(ctx, "/tmp/tests.json")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	defer rc.Close()
 
 	// assert using the generated file
 	jsonBytes, err := io.ReadAll(rc)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 
 	// merge both JSON files
 	// 1. get the spans and metrics JSONs, they are separated by \n
@@ -246,15 +233,11 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	var resSpans ResourceSpans
 	err = json.Unmarshal([]byte(jsonSpans), &resSpans)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	require.NoError(t, err)
 
 	var resMetrics ResourceMetrics
 	err = json.Unmarshal([]byte(jsonMetrics), &resMetrics)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	require.NoError(t, err)
 
 	testReport := TestReport{
 		resourceSpans:   resSpans,
@@ -264,22 +247,18 @@ func Test_Main_SampleXML(t *testing.T) {
 	resourceSpans := testReport.resourceSpans.Spans[0]
 
 	srvNameAttribute, err := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, "service.name", srvNameAttribute.Key)
+	require.NoError(t, err)
+	require.Equal(t, "service.name", srvNameAttribute.Key)
 	assertStringValueInAttribute(t, srvNameAttribute.Value, "jaeger-srv-test")
 
 	srvVersionAttribute, err := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
-	if err != nil {
-		t.Error(err)
-	}
-	assert.Equal(t, "service.version", srvVersionAttribute.Key)
+	require.NoError(t, err)
+	require.Equal(t, "service.version", srvVersionAttribute.Key)
 	assertStringValueInAttribute(t, srvVersionAttribute.Value, "")
 
 	instrumentationLibrarySpans := resourceSpans.InstrumentationLibrarySpans[0]
 
-	assert.Equal(t, "jaeger-srv-test", instrumentationLibrarySpans.InstrumentationLibrary.Name)
+	require.Equal(t, "jaeger-srv-test", instrumentationLibrarySpans.InstrumentationLibrary.Name)
 
 	spans := instrumentationLibrarySpans.Spans
 
@@ -289,33 +268,27 @@ func Test_Main_SampleXML(t *testing.T) {
 	// 	 11 testcase elements
 	expectedSpansCount := 15
 
-	assert.Equal(t, expectedSpansCount, len(spans))
+	require.Equal(t, expectedSpansCount, len(spans))
 
 	aTestCase := spans[2]
-	assert.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
-	assert.Equal(t, "SPAN_KIND_INTERNAL", aTestCase.Kind)
+	require.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
+	require.Equal(t, "SPAN_KIND_INTERNAL", aTestCase.Kind)
 
 	codeFunction, err := findAttributeInArray(aTestCase.Attributes, "code.function")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	assertStringValueInAttribute(t, codeFunction.Value, "TestCheckConfigDirsCreatesWorkspaceAtHome")
 
 	testClassName, err := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	assertStringValueInAttribute(t, testClassName.Value, "github.com/elastic/e2e-testing/cli/config")
 
 	goVersion, err := findAttributeInArray(aTestCase.Attributes, "go.version")
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	assertStringValueInAttribute(t, goVersion.Value, "go1.16.3 linux/amd64")
 
 	// last span is server type
 	aTestCase = spans[expectedSpansCount-1]
-	assert.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
+	require.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
 }
 
 func Test_GetServiceVariable(t *testing.T) {
@@ -351,7 +324,7 @@ func Test_GetServiceVariable(t *testing.T) {
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, otlpotlpTest.fallback, actualValue)
+				require.Equal(t, otlpotlpTest.fallback, actualValue)
 			})
 
 			t.Run("With environment variable and no flag retrieves the variable", func(t *testing.T) {
@@ -360,7 +333,7 @@ func Test_GetServiceVariable(t *testing.T) {
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, "foobar", actualValue)
+				require.Equal(t, "foobar", actualValue)
 			})
 
 			t.Run("Without environment variable and flag retrieves the flag", func(t *testing.T) {
@@ -369,7 +342,7 @@ func Test_GetServiceVariable(t *testing.T) {
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, "this-is-a-flag", actualValue)
+				require.Equal(t, "this-is-a-flag", actualValue)
 			})
 
 			t.Run("With environment variable and flag retrieves the flag", func(t *testing.T) {
@@ -378,7 +351,7 @@ func Test_GetServiceVariable(t *testing.T) {
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, "foobar", actualValue)
+				require.Equal(t, "foobar", actualValue)
 			})
 		})
 	}

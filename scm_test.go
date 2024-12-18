@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckGitContext(t *testing.T) {
@@ -57,11 +57,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreGithubFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, testSha, gitCtx.Commit)
-			assert.Equal(t, testHeadRef, gitCtx.Branch)
-			assert.Equal(t, testHeadRef, gitCtx.GetTargetBranch())
-			assert.Equal(t, "Github", gitCtx.Provider)
-			assert.False(t, gitCtx.ChangeRequest)
+			require.Equal(t, testSha, gitCtx.Commit)
+			require.Equal(t, testHeadRef, gitCtx.Branch)
+			require.Equal(t, testHeadRef, gitCtx.GetTargetBranch())
+			require.Equal(t, "Github", gitCtx.Provider)
+			require.False(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
@@ -73,11 +73,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreGithubFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, testSha, gitCtx.Commit)
-			assert.Equal(t, testHeadRef, gitCtx.Branch)
-			assert.Equal(t, testBaseRef, gitCtx.GetTargetBranch())
-			assert.Equal(t, "Github", gitCtx.Provider)
-			assert.True(t, gitCtx.ChangeRequest)
+			require.Equal(t, testSha, gitCtx.Commit)
+			require.Equal(t, testHeadRef, gitCtx.Branch)
+			require.Equal(t, testBaseRef, gitCtx.GetTargetBranch())
+			require.Equal(t, "Github", gitCtx.Provider)
+			require.True(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -111,11 +111,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreJenkinsFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, testSha, gitCtx.Commit)
-			assert.Equal(t, testBranch, gitCtx.Branch)
-			assert.Equal(t, testBranch, gitCtx.GetTargetBranch())
-			assert.Equal(t, "Jenkins", gitCtx.Provider)
-			assert.False(t, gitCtx.ChangeRequest)
+			require.Equal(t, testSha, gitCtx.Commit)
+			require.Equal(t, testBranch, gitCtx.Branch)
+			require.Equal(t, testBranch, gitCtx.GetTargetBranch())
+			require.Equal(t, "Jenkins", gitCtx.Provider)
+			require.False(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running for Pull Requests", func(t *testing.T) {
@@ -129,11 +129,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreJenkinsFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, testSha, gitCtx.Commit)
-			assert.Equal(t, testBranch, gitCtx.Branch)
-			assert.Equal(t, "main", gitCtx.GetTargetBranch())
-			assert.Equal(t, "Jenkins", gitCtx.Provider)
-			assert.True(t, gitCtx.ChangeRequest)
+			require.Equal(t, testSha, gitCtx.Commit)
+			require.Equal(t, testBranch, gitCtx.Branch)
+			require.Equal(t, "main", gitCtx.GetTargetBranch())
+			require.Equal(t, "Jenkins", gitCtx.Provider)
+			require.True(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -159,11 +159,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreGitlabFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, "0123456", gitCtx.Commit)
-			assert.Equal(t, "branch", gitCtx.Branch)
-			assert.Equal(t, "branch", gitCtx.GetTargetBranch())
-			assert.Equal(t, "Gitlab", gitCtx.Provider)
-			assert.False(t, gitCtx.ChangeRequest)
+			require.Equal(t, "0123456", gitCtx.Commit)
+			require.Equal(t, "branch", gitCtx.Branch)
+			require.Equal(t, "branch", gitCtx.GetTargetBranch())
+			require.Equal(t, "Gitlab", gitCtx.Provider)
+			require.False(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running for Merge Requests", func(t *testing.T) {
@@ -175,11 +175,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreGitlabFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, "0123456", gitCtx.Commit)
-			assert.Equal(t, "branch", gitCtx.Branch)
-			assert.Equal(t, "main", gitCtx.GetTargetBranch())
-			assert.Equal(t, "Gitlab", gitCtx.Provider)
-			assert.True(t, gitCtx.ChangeRequest)
+			require.Equal(t, "0123456", gitCtx.Commit)
+			require.Equal(t, "branch", gitCtx.Branch)
+			require.Equal(t, "main", gitCtx.GetTargetBranch())
+			require.Equal(t, "Gitlab", gitCtx.Provider)
+			require.True(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -193,11 +193,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreSCMContextsFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, "", gitCtx.Commit)
-			assert.Equal(t, "foo", gitCtx.Branch)
-			assert.Equal(t, "main", gitCtx.GetTargetBranch())
-			assert.Equal(t, "", gitCtx.Provider)
-			assert.True(t, gitCtx.ChangeRequest)
+			require.Equal(t, "", gitCtx.Commit)
+			require.Equal(t, "foo", gitCtx.Branch)
+			require.Equal(t, "main", gitCtx.GetTargetBranch())
+			require.Equal(t, "", gitCtx.Provider)
+			require.True(t, gitCtx.ChangeRequest)
 		})
 
 		t.Run("Running without TARGET_BRANCH", func(t *testing.T) {
@@ -207,11 +207,11 @@ func TestCheckGitContext(t *testing.T) {
 			defer restoreSCMContextsFn()
 
 			gitCtx := checkGitContext()
-			assert.Equal(t, "", gitCtx.Commit)
-			assert.Equal(t, "foo", gitCtx.Branch)
-			assert.Equal(t, "foo", gitCtx.GetTargetBranch())
-			assert.Equal(t, "", gitCtx.Provider)
-			assert.False(t, gitCtx.ChangeRequest)
+			require.Equal(t, "", gitCtx.Commit)
+			require.Equal(t, "foo", gitCtx.Branch)
+			require.Equal(t, "foo", gitCtx.GetTargetBranch())
+			require.Equal(t, "", gitCtx.Provider)
+			require.False(t, gitCtx.ChangeRequest)
 		})
 	})
 
@@ -221,7 +221,7 @@ func TestCheckGitContext(t *testing.T) {
 		defer restoreSCMContextsFn()
 
 		gitCtx := checkGitContext()
-		assert.Nil(t, gitCtx)
+		require.Nil(t, gitCtx)
 	})
 }
 
@@ -239,7 +239,7 @@ func TestGetScm(t *testing.T) {
 	t.Run("This project does not use Git", func(t *testing.T) {
 		scm := GetScm(t.TempDir())
 
-		assert.Nil(t, scm, "The directory should not contain a .git directory")
+		require.Nil(t, scm, "The directory should not contain a .git directory")
 	})
 }
 
@@ -251,7 +251,7 @@ func TestGetTargetBranch(t *testing.T) {
 			Branch:        "branch",
 		}
 
-		assert.Equal(t, "target", ctx.GetTargetBranch())
+		require.Equal(t, "target", ctx.GetTargetBranch())
 	})
 
 	t.Run("For branches it must return branch", func(t *testing.T) {
@@ -261,6 +261,6 @@ func TestGetTargetBranch(t *testing.T) {
 			Branch:        "branch",
 		}
 
-		assert.Equal(t, "branch", ctx.GetTargetBranch())
+		require.Equal(t, "branch", ctx.GetTargetBranch())
 	})
 }
