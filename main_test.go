@@ -214,16 +214,6 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	collectorPort, err := otelCollector.MappedPort(ctx, "4317/tcp")
 	if err != nil {
-		ports, portErr := otelCollector.Ports(ctx)
-		if portErr != nil {
-			fmt.Printf("could not get ports for otel-collector: %v", portErr)
-			t.Errorf("could not get ports for otel-collector: %v", portErr)
-		}
-
-		for _, port := range ports {
-			fmt.Printf("port: %s\n", port)
-		}
-
 		t.Errorf("could not get mapped port for otel-collector: %v", err)
 	}
 
