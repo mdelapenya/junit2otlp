@@ -172,7 +172,7 @@ func Test_Main_SampleXML(t *testing.T) {
 			Files: []testcontainers.ContainerFile{
 				{
 					ContainerFilePath: "/etc/otel/config.yaml",
-					HostFilePath:      filepath.Join("testresources", "otel-collector-config.yml"),
+					HostFilePath:      filepath.Join("testdata", "otel-collector-config.yml"),
 				},
 				{
 					Reader:            reportFile,
