@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/joshdk/go-junit"
@@ -27,19 +29,30 @@ var repositoryPathFlag string
 var serviceNameFlag string
 var serviceVersionFlag string
 var traceNameFlag string
+var propertiesAllowedString string
 
 var runtimeAttributes []attribute.KeyValue
+var propsAllowed []string
 
 func init() {
 	flag.StringVar(&repositoryPathFlag, "repository-path", getDefaultwd(), "Path to the SCM repository to be read")
 	flag.StringVar(&serviceNameFlag, "service-name", "", "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&propertiesAllowedString, "properties-allowed", "", "Comma separated list of properties to be allowed in the jUnit report")
 
-	// initialise runtime keys
+	// initialize runtime keys
 	runtimeAttributes = []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
 		semconv.OSNameKey.String(runtime.GOOS),
+	}
+
+	propsAllowed = []string{}
+	if propertiesAllowedString != "" {
+		allowed := strings.Split(propertiesAllowedString, ",")
+		for _, prop := range allowed {
+			propsAllowed = append(propsAllowed, strings.TrimSpace(prop))
+		}
 	}
 }
 
@@ -73,12 +86,20 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 	for _, suite := range suites {
 		totals := suite.Totals
 
+		fmt.Printf("Suite: %s\n", suite.Name)
+		fmt.Printf("Duration: %s\n", totals.Duration)
+		fmt.Printf("Error: %d\n", totals.Error)
+		fmt.Printf("Failed: %d\n", totals.Failed)
+		fmt.Printf("Passed: %d\n", totals.Passed)
+		fmt.Printf("Skipped: %d\n", totals.Skipped)
+		fmt.Printf("Tests: %d\n", totals.Tests)
+
 		suiteAttributes := []attribute.KeyValue{
 			semconv.CodeNamespaceKey.String(suite.Package),
 			attribute.Key(TestsSuiteName).String(suite.Name),
-			attribute.Key(TestsSystemErr).String(suite.SystemErr),
-			attribute.Key(TestsSystemOut).String(suite.SystemOut),
-			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
+			// attribute.Key(TestsSystemErr).String(suite.SystemErr),
+			// attribute.Key(TestsSystemOut).String(suite.SystemOut),
+			//attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
 		}
 
 		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
@@ -193,6 +214,11 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 func propsToLabels(props map[string]string) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{}
 	for k, v := range props {
+		// when an allow list is provided, only include the properties that are in the list
+		if len(propsAllowed) > 0 && !slices.Contains(propsAllowed, k) {
+			continue
+		}
+
 		attributes = append(attributes, attribute.Key(k).String(v))
 	}
 
@@ -211,6 +237,10 @@ func (pr *PipeReader) Read() ([]byte, error) {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		var buf []byte
 		scanner := bufio.NewScanner(os.Stdin)
+
+		// 64KB initial buffer, 1MB max buffer size
+		// was seeing large failure messages causing parsing to fail
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 		for scanner.Scan() {
 			buf = append(buf, scanner.Bytes()...)
