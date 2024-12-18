@@ -109,14 +109,18 @@ func assertStringValueInAttribute(t *testing.T, att TestAttributeValue, expected
 	require.Equal(t, expected, att.StringValue)
 }
 
-func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute, error) {
+func requireAttributeInArray(t *testing.T, attributes []TestAttribute, key string) TestAttribute {
+	t.Helper()
+
 	for _, att := range attributes {
 		if att.Key == key {
-			return att, nil
+			return att
 		}
 	}
 
-	return TestAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
+	t.Fatalf("attribute with key '%s' not found", key)
+
+	return TestAttribute{}
 }
 
 func Test_Main_SampleXML(t *testing.T) {
@@ -248,12 +252,12 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	resourceSpans := testReport.resourceSpans.Spans[0]
 
-	srvNameAttribute, err := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
+	srvNameAttribute := requireAttributeInArray(t, resourceSpans.Resource.Attributes, "service.name")
 	require.NoError(t, err)
 	require.Equal(t, "service.name", srvNameAttribute.Key)
 	assertStringValueInAttribute(t, srvNameAttribute.Value, "jaeger-srv-test")
 
-	srvVersionAttribute, err := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
+	srvVersionAttribute := requireAttributeInArray(t, resourceSpans.Resource.Attributes, "service.version")
 	require.NoError(t, err)
 	require.Equal(t, "service.version", srvVersionAttribute.Key)
 	assertStringValueInAttribute(t, srvVersionAttribute.Value, "")
@@ -276,15 +280,15 @@ func Test_Main_SampleXML(t *testing.T) {
 	require.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
 	require.Equal(t, "SPAN_KIND_INTERNAL", aTestCase.Kind)
 
-	codeFunction, err := findAttributeInArray(aTestCase.Attributes, "code.function")
+	codeFunction := requireAttributeInArray(t, aTestCase.Attributes, "code.function")
 	require.NoError(t, err)
 	assertStringValueInAttribute(t, codeFunction.Value, "TestCheckConfigDirsCreatesWorkspaceAtHome")
 
-	testClassName, err := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
+	testClassName := requireAttributeInArray(t, aTestCase.Attributes, "tests.case.classname")
 	require.NoError(t, err)
 	assertStringValueInAttribute(t, testClassName.Value, "github.com/elastic/e2e-testing/cli/config")
 
-	goVersion, err := findAttributeInArray(aTestCase.Attributes, "go.version")
+	goVersion := requireAttributeInArray(t, aTestCase.Attributes, "go.version")
 	require.NoError(t, err)
 	assertStringValueInAttribute(t, goVersion.Value, "go1.16.3 linux/amd64")
 
