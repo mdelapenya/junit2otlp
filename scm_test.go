@@ -143,6 +143,12 @@ func TestCheckGitContext(t *testing.T) {
 	})
 
 	t.Run("Empty SCM context", func(t *testing.T) {
+		// Disable Local, Github, Jenkins and Gitlab
+		t.Setenv("BRANCH", "")
+		t.Setenv("GITHUB_SHA", "")
+		t.Setenv("JENKINS_URL", "")
+		t.Setenv("CI_COMMIT_BRANCH", "")
+
 		gitCtx := checkGitContext()
 		require.Nil(t, gitCtx)
 	})
