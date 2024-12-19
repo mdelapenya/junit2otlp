@@ -258,7 +258,10 @@ func Test_Main_SampleXML(t *testing.T) {
 	time.Sleep(time.Second * 30)
 
 	// assert using the generated file
-	jsonBytes, _ := ioutil.ReadFile(reportFilePath)
+	jsonBytes, err := os.ReadFile(reportFilePath)
+	if err != nil {
+		t.Error(err)
+	}
 
 	// merge both JSON files
 	// 1. get the spans and metrics JSONs, they are separated by \n
@@ -266,15 +269,29 @@ func Test_Main_SampleXML(t *testing.T) {
 	// 3. unmarshal each resource separately
 	// 4. assign each resource to the test report struct
 	content := string(jsonBytes)
-	jsons := strings.Split(content, "\n")
-	jsonSpans := strings.TrimSpace(jsons[0])
-	jsonMetrics := strings.TrimSpace(jsons[1])
+
+	jsons := strings.Split(strings.TrimSpace(content), "\n")
+	if len(jsons) != 2 {
+		t.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
+	}
+
+	jsonSpans := ""
+	jsonMetrics := ""
+	// the order of the lines is not guaranteed
+	if strings.Contains(jsons[0], "resourceSpans") {
+		jsonSpans = strings.TrimSpace(jsons[0])
+		jsonMetrics = strings.TrimSpace(jsons[1])
+	} else {
+		jsonSpans = strings.TrimSpace(jsons[1])
+		jsonMetrics = strings.TrimSpace(jsons[0])
+	}
 
 	var resSpans ResourceSpans
 	err = json.Unmarshal([]byte(jsonSpans), &resSpans)
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	var resMetrics ResourceMetrics
 	err = json.Unmarshal([]byte(jsonMetrics), &resMetrics)
 	if err != nil {
