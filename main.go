@@ -13,16 +13,10 @@ import (
 	"github.com/joshdk/go-junit"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -49,8 +43,8 @@ func init() {
 	}
 }
 
-func createIntCounter(meter metric.Meter, name string, description string) syncint64.Counter {
-	counter, _ := meter.SyncInt64().Counter(name, instrument.WithDescription(description))
+func createIntCounter(meter metric.Meter, name string, description string) metric.Int64Counter {
+	counter, _ := meter.Int64Counter(name, metric.WithDescription(description))
 	// Accumulators always return nil errors
 	// see https://github.com/open-telemetry/opentelemetry-go/blob/e8fbfd3ec52d8153eea3f13465b7de15cd8f6320/sdk/metric/sdk.go#L256-L264
 	return counter
@@ -58,7 +52,7 @@ func createIntCounter(meter metric.Meter, name string, description string) synci
 
 func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
 	tracer := tracesProvides.Tracer(srvName)
-	meter := global.Meter(srvName)
+	meter := otel.Meter(srvName)
 
 	scm := GetScm(repositoryPathFlag)
 	if scm != nil {
@@ -90,15 +84,17 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
 		suiteAttributes = append(suiteAttributes, propsToLabels(suite.Properties)...)
 
-		durationCounter.Add(ctx, totals.Duration.Milliseconds(), suiteAttributes...)
-		errorCounter.Add(ctx, int64(totals.Error), suiteAttributes...)
-		failedCounter.Add(ctx, int64(totals.Failed), suiteAttributes...)
-		passedCounter.Add(ctx, int64(totals.Passed), suiteAttributes...)
-		skippedCounter.Add(ctx, int64(totals.Skipped), suiteAttributes...)
-		testsCounter.Add(ctx, int64(totals.Tests), suiteAttributes...)
+		attributeSet := attribute.NewSet(suiteAttributes...)
+		metricAttributes := metric.WithAttributeSet(attributeSet)
 
-		ctx, suiteSpan := tracer.Start(ctx, suite.Name,
-			trace.WithAttributes(suiteAttributes...))
+		durationCounter.Add(ctx, totals.Duration.Milliseconds(), metricAttributes)
+		errorCounter.Add(ctx, int64(totals.Error), metricAttributes)
+		failedCounter.Add(ctx, int64(totals.Failed), metricAttributes)
+		passedCounter.Add(ctx, int64(totals.Passed), metricAttributes)
+		skippedCounter.Add(ctx, int64(totals.Skipped), metricAttributes)
+		testsCounter.Add(ctx, int64(totals.Tests), metricAttributes)
+
+		ctx, suiteSpan := tracer.Start(ctx, suite.Name, trace.WithAttributes(suiteAttributes...))
 		for _, test := range suite.Tests {
 			testAttributes := []attribute.KeyValue{
 				semconv.CodeFunctionKey.String(test.Name),
@@ -117,8 +113,7 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 				testAttributes = append(testAttributes, attribute.Key(TestError).String(test.Error.Error()))
 			}
 
-			_, testSpan := tracer.Start(ctx, test.Name,
-				trace.WithAttributes(testAttributes...))
+			_, testSpan := tracer.Start(ctx, test.Name, trace.WithAttributes(testAttributes...))
 			testSpan.End()
 		}
 
@@ -162,32 +157,21 @@ func getOtlpServiceVersion() string {
 	return getOtlpEnvVar(serviceVersionFlag, "OTEL_SERVICE_VERSION", "")
 }
 
-func initMetricsExporter(ctx context.Context) (*otlpmetric.Exporter, error) {
-	exp, err := otlpmetricgrpc.New(ctx)
+func initMetricsProvider(ctx context.Context, res *resource.Resource) (*sdkmetric.MeterProvider, error) {
+	exporter, err := otlpmetricgrpc.New(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the collector exporter: %v", err)
 	}
 
-	return exp, nil
-}
-
-func initMetricsPusher(ctx context.Context, exporter *otlpmetric.Exporter, res *resource.Resource) (*controller.Controller, error) {
-	pusher := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(),
-			exporter,
-		),
-		controller.WithExporter(exporter),
-		controller.WithCollectPeriod(2*time.Second),
-		controller.WithResource(res),
+	reader := sdkmetric.NewPeriodicReader(exporter, sdkmetric.WithInterval(2*time.Second))
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(reader),
+		sdkmetric.WithResource(res),
 	)
-	global.SetMeterProvider(pusher)
 
-	if err := pusher.Start(ctx); err != nil {
-		return nil, fmt.Errorf("could not start metric controller: %v", err)
-	}
+	otel.SetMeterProvider(meterProvider)
 
-	return pusher, nil
+	return meterProvider, nil
 }
 
 func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.TracerProvider, error) {
@@ -200,6 +184,9 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 		sdktrace.WithResource(res),
 		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
 	)
+
+	otel.SetTracerProvider(tracerProvider)
+
 	return tracerProvider, nil
 }
 
@@ -261,27 +248,15 @@ func Main(ctx context.Context, reader InputReader) error {
 	}
 	defer tracesProvides.Shutdown(ctx)
 
-	metricsExporter, err := initMetricsExporter(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to initialise metrics exporter: %v", err)
-	}
-	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second)
-		defer cancel()
-		if err := metricsExporter.Shutdown(ctx); err != nil {
-			otel.Handle(err)
-		}
-	}()
-
-	pusher, err := initMetricsPusher(ctx, metricsExporter, res)
+	provider, err := initMetricsProvider(ctx, res)
 	if err != nil {
 		return fmt.Errorf("failed to initialise pusher: %v", err)
 	}
 	defer func() {
-		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
+		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 		defer cancel()
 		// pushes any last exports to the receiver
-		if err := pusher.Stop(ctx); err != nil {
+		if err := provider.Shutdown(ctx); err != nil {
 			otel.Handle(err)
 		}
 	}()
