@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/go-git/go-git/v5 v5.4.2
-	github.com/joshdk/go-junit v0.0.0-20210226021600-6145f504ca0d
+	github.com/joshdk/go-junit v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.34.0
