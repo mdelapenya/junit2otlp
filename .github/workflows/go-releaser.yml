@@ -10,6 +10,7 @@ on:
 
 jobs:
   goreleaser:
+    if: github.repository == 'mdelapenya/junit2otlp'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
