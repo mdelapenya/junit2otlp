@@ -23,6 +23,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const defaultMaxBatchSize = 10
+
+var batchSizeFlag int
 var repositoryPathFlag string
 var serviceNameFlag string
 var serviceVersionFlag string
@@ -31,6 +34,7 @@ var traceNameFlag string
 var runtimeAttributes []attribute.KeyValue
 
 func init() {
+	flag.IntVar(&batchSizeFlag, "batch-size", defaultMaxBatchSize, "Maximum export batch size allowed when creating a BatchSpanProcessor")
 	flag.StringVar(&repositoryPathFlag, "repository-path", getDefaultwd(), "Path to the SCM repository to be read")
 	flag.StringVar(&serviceNameFlag, "service-name", "", "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
@@ -182,7 +186,12 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithResource(res),
-		sdktrace.WithSpanProcessor(sdktrace.NewBatchSpanProcessor(traceExporter)),
+		sdktrace.WithSpanProcessor(
+			sdktrace.NewBatchSpanProcessor(
+				traceExporter,
+				sdktrace.WithMaxExportBatchSize(batchSizeFlag),
+			),
+		),
 	)
 
 	otel.SetTracerProvider(tracerProvider)

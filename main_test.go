@@ -125,9 +125,7 @@ func requireAttributeInArray(t *testing.T, attributes []TestAttribute, key strin
 	return TestAttribute{}
 }
 
-func Test_Main_SampleXML(t *testing.T) {
-	t.Setenv("BRANCH", "main")
-
+func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontainers.Container) {
 	ctx := context.Background()
 
 	// create file for otel to store the traces
@@ -197,12 +195,22 @@ func Test_Main_SampleXML(t *testing.T) {
 	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
 	t.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
 
+	return ctx, reportFilePath, otelCollector
+}
+
+func Test_Main_SampleXML(t *testing.T) {
+	t.Setenv("BRANCH", "main")
+	batchSizeFlag = 25
+
+	ctx, reportFilePath, otelCollector := setupRuntimeDependencies(t)
+
 	defer func() {
+		batchSizeFlag = defaultMaxBatchSize
 		// clean up test report
 		os.Remove(reportFilePath)
 	}()
 
-	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
+	err := Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
 	require.NoError(t, err)
 
 	// wait for the file to be written by the otel-exporter
