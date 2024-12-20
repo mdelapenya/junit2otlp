@@ -265,7 +265,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 		env      map[string]string
 	}
 
-	branchName := "this-is-a-test-branch"
+	branchName := "feature/this-is-a-test-branch"
 
 	tests := []testData{
 		{
@@ -393,7 +393,7 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 func TestGit_ContributeCommitters(t *testing.T) {
 	t.Setenv("GITHUB_SHA", "")
 
-	branchName := "this-is-a-test-branch"
+	branchName := "feature/this-is-a-test-branch"
 
 	type testData struct {
 		provider string
@@ -456,7 +456,7 @@ func TestGit_ContributeCommitters(t *testing.T) {
 func TestGit_ContributeFilesAndLines(t *testing.T) {
 	t.Setenv("GITHUB_SHA", "")
 
-	branchName := "this-is-a-test-branch"
+	branchName := "feature/this-is-a-test-branch"
 
 	type testData struct {
 		provider string
@@ -521,7 +521,7 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 	t.Setenv("GITHUB_SHA", "")
 
-	branchName := "this-is-a-test-branch"
+	branchName := "feature/this-is-a-test-branch"
 
 	type testData struct {
 		provider string
