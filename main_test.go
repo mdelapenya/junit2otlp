@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -177,6 +176,7 @@ func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontai
 					ContainerFilePath: "/tmp/tests.json",
 				},
 			},
+			WaitingFor: wait.ForListeningPort("4317/tcp"),
 		},
 		Started: true,
 	})
@@ -184,9 +184,7 @@ func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontai
 	require.NoError(t, err)
 
 	collectorPort, err := otelCollector.MappedPort(ctx, "4317/tcp")
-	if err != nil {
-		t.Errorf("could not get mapped port for otel-collector: %v", err)
-	}
+	require.NoError(t, err)
 
 	t.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
 	t.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")

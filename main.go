@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/joshdk/go-junit"
@@ -30,8 +32,12 @@ var repositoryPathFlag string
 var serviceNameFlag string
 var serviceVersionFlag string
 var traceNameFlag string
+var propertiesAllowedString string
+
+const propertiesAllowAll = "all"
 
 var runtimeAttributes []attribute.KeyValue
+var propsAllowed []string
 
 func init() {
 	flag.IntVar(&batchSizeFlag, "batch-size", defaultMaxBatchSize, "Maximum export batch size allowed when creating a BatchSpanProcessor")
@@ -39,11 +45,20 @@ func init() {
 	flag.StringVar(&serviceNameFlag, "service-name", "", "OpenTelemetry Service Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
+	flag.StringVar(&propertiesAllowedString, "properties-allowed", propertiesAllowAll, "Comma separated list of properties to be allowed in the jUnit report")
 
-	// initialise runtime keys
+	// initialize runtime keys
 	runtimeAttributes = []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
 		semconv.OSNameKey.String(runtime.GOOS),
+	}
+
+	propsAllowed = []string{}
+	if propertiesAllowedString != "" {
+		allowed := strings.Split(propertiesAllowedString, ",")
+		for _, prop := range allowed {
+			propsAllowed = append(propsAllowed, strings.TrimSpace(prop))
+		}
 	}
 }
 
@@ -202,6 +217,13 @@ func initTracerProvider(ctx context.Context, res *resource.Resource) (*sdktrace.
 func propsToLabels(props map[string]string) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{}
 	for k, v := range props {
+		// if propertiesAllowedString is not "all" (default) and the key is not in the
+		// allowed list, skip it
+		if propertiesAllowedString != propertiesAllowAll &&
+			len(propsAllowed) > 0 && !slices.Contains(propsAllowed, k) {
+			continue
+		}
+
 		attributes = append(attributes, attribute.Key(k).String(v))
 	}
 
@@ -223,6 +245,10 @@ func (pr *PipeReader) Read() ([]byte, error) {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		var buf []byte
 		scanner := bufio.NewScanner(os.Stdin)
+
+		// 64KB initial buffer, 1MB max buffer size
+		// was seeing large failure messages causing parsing to fail
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 		for scanner.Scan() {
 			buf = append(buf, scanner.Bytes()...)
