@@ -304,6 +304,22 @@ func Test_Main_SampleXML(t *testing.T) {
 	// last span is server type
 	aTestCase = spans[expectedSpansCount-1]
 	require.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
+
+	// metrics
+	resourceMetrics := testReport.resourceMetrics.Metrics[0]
+	metrics := resourceMetrics.InstrumentationLibraryMetrics[0].Metrics
+
+	require.Equal(t, ErrorTestsCount, metrics[0].Name)
+	require.Equal(t, FailedTestsCount, metrics[1].Name)
+	require.Equal(t, SkippedTestsCount, metrics[2].Name)
+	require.Equal(t, PassedTestsCount, metrics[3].Name)
+	require.Equal(t, TotalTestsCount, metrics[4].Name)
+	require.Equal(t, TestsDuration, metrics[5].Name)
+	require.Equal(t, TestsDurationHist, metrics[6].Name)
+
+	require.Equal(t, CasePassedCount, metrics[7].Name)
+	require.Equal(t, CaseDuration, metrics[8].Name)
+	require.Equal(t, CaseDurationHist, metrics[9].Name)
 }
 
 func Test_GetServiceVariable(t *testing.T) {
