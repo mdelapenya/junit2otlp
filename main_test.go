@@ -1,39 +1,33 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/avast/retry-go"
 	"github.com/docker/go-connections/nat"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/network"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 const exporterEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT"
-
-var originalEnvVar string
-var originalServiceNameFlag string
-var originalEndpoint string
-
-func init() {
-	originalEndpoint = os.Getenv(exporterEndpointKey)
-	originalEnvVar = os.Getenv("OTEL_SERVICE_NAME")
-	originalServiceNameFlag = serviceNameFlag
-}
 
 type TestReader struct {
 	testFile string
 }
 
 func (tr *TestReader) Read() ([]byte, error) {
-	b, err := ioutil.ReadFile(tr.testFile)
+	b, err := os.ReadFile(tr.testFile)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -113,59 +107,42 @@ type TestReport struct {
 }
 
 func assertStringValueInAttribute(t *testing.T, att TestAttributeValue, expected string) {
-	assert.Equal(t, expected, att.StringValue)
+	t.Helper()
+
+	require.Equal(t, expected, att.StringValue)
 }
 
-func findAttributeInArray(attributes []TestAttribute, key string) (TestAttribute, error) {
+func requireAttributeInArray(t *testing.T, attributes []TestAttribute, key string) TestAttribute {
+	t.Helper()
+
 	for _, att := range attributes {
 		if att.Key == key {
-			return att, nil
+			return att
 		}
 	}
 
-	return TestAttribute{}, fmt.Errorf("attribute with key '%s' not found", key)
+	t.Fatalf("attribute with key '%s' not found", key)
+
+	return TestAttribute{}
 }
 
-func Test_Main_SampleXML(t *testing.T) {
-	os.Setenv("BRANCH", "main")
-	defer func() {
-		os.Unsetenv("BRANCH")
-	}()
-
+func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontainers.Container) {
 	ctx := context.Background()
 
 	// create file for otel to store the traces
-	workingDir, err := os.Getwd()
-	if err != nil {
-		t.Error()
-	}
+	tmpDir := t.TempDir()
 
-	buildDir := path.Join(workingDir, "build")
-	if _, err := os.Stat(buildDir); os.IsNotExist(err) {
-		err = os.Mkdir(buildDir, 0755)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-
-	reportFilePath := path.Join(buildDir, "otel-collector.json")
+	reportFilePath := filepath.Join(tmpDir, "otel-collector.json")
 	reportFile, err := os.Create(reportFilePath)
-	if err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, err)
 	defer reportFile.Close()
 
 	// create docker network for the containers
-	networkName := "jaeger-integration-tests"
+	nw, err := network.New(ctx)
+	testcontainers.CleanupNetwork(t, nw)
+	require.NoError(t, err)
 
-	network, err := testcontainers.GenericNetwork(ctx, testcontainers.GenericNetworkRequest{
-		NetworkRequest: testcontainers.NetworkRequest{
-			Name: networkName,
-		},
-	})
-	if err != nil {
-		t.Error(err)
-	}
+	networkName := nw.Name
 
 	jaeger, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
@@ -179,9 +156,8 @@ func Test_Main_SampleXML(t *testing.T) {
 		},
 		Started: true,
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	testcontainers.CleanupContainer(t, jaeger)
+	require.NoError(t, err)
 
 	otelCollector, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: testcontainers.ContainerRequest{
@@ -192,26 +168,21 @@ func Test_Main_SampleXML(t *testing.T) {
 				"4317/tcp",  // OTLP gRPC receiver
 				"55679/tcp", // zpages extension
 			},
-			Mounts: testcontainers.ContainerMounts{
+			Files: []testcontainers.ContainerFile{
 				{
-					Source: testcontainers.GenericBindMountSource{
-						HostPath: path.Join(workingDir, "testresources", "otel-collector-config.yml"),
-					},
-					Target: "/etc/otel/config.yaml",
+					ContainerFilePath: "/etc/otel/config.yaml",
+					HostFilePath:      filepath.Join("testdata", "otel-collector-config.yml"),
 				},
 				{
-					Source: testcontainers.GenericBindMountSource{
-						HostPath: reportFilePath,
-					},
-					Target: "/tmp/tests.json",
+					Reader:            reportFile,
+					ContainerFilePath: "/tmp/tests.json",
 				},
 			},
 		},
 		Started: true,
 	})
-	if err != nil {
-		t.Error(err)
-	}
+	testcontainers.CleanupContainer(t, otelCollector)
+	require.NoError(t, err)
 
 	var collectorPort nat.Port
 	err = retry.Do(func() error {
@@ -226,65 +197,53 @@ func Test_Main_SampleXML(t *testing.T) {
 		t.Errorf("could not get the collector port: %s", err)
 	}
 
-	os.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
-	os.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
-	os.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
-	os.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
+	t.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
+	t.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_METRIC_INSECURE", "true")
+	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+	t.Setenv("OTEL_SERVICE_NAME", "jaeger-srv-test")
+
+	return ctx, reportFilePath, otelCollector
+}
+
+func Test_Main_SampleXML(t *testing.T) {
+	t.Setenv("BRANCH", "main")
+	batchSizeFlag = 25
+
+	ctx, reportFilePath, otelCollector := setupRuntimeDependencies(t)
 
 	defer func() {
-		err := otelCollector.Terminate(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		err = jaeger.Terminate(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-		// clean up network
-		err = network.Remove(ctx)
-		if err != nil {
-			t.Error(err)
-		}
-
+		batchSizeFlag = defaultMaxBatchSize
 		// clean up test report
 		os.Remove(reportFilePath)
-
-		// reset environment
-		os.Setenv(exporterEndpointKey, originalEndpoint)
 	}()
 
-	err = Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
-	if err != nil {
-		t.Error()
-	}
+	err := Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
+	require.NoError(t, err)
 
+	// wait for the file to be written by the otel-exporter
+	var out bytes.Buffer
+	err = wait.ForFile("/tmp/tests.json").
+		WithStartupTimeout(time.Second*10).
+		WithPollInterval(time.Second).
+		WithMatcher(func(r io.Reader) error {
+			if _, err := io.Copy(&out, r); err != nil {
+				return fmt.Errorf("copy: %w", err)
+			}
+			return nil
+		}).WaitUntilReady(ctx, otelCollector)
+	require.NoError(t, err)
+
+	// assert using the generated file
 	// merge both JSON files
 	// 1. get the spans and metrics JSONs, they are separated by \n
 	// 2. remote white spaces
 	// 3. unmarshal each resource separately
 	// 4. assign each resource to the test report struct
-
-	var jsons []string
-	err = retry.Do(func() error {
-		// assert using the generated file
-		jsonBytes, err := os.ReadFile(reportFilePath)
-		if err != nil {
-			t.Error(err)
-		}
-
-		content := string(jsonBytes)
-
-		jsons = strings.Split(strings.TrimSpace(content), "\n")
-		if len(jsons) != 2 {
-			return fmt.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
-		}
-
-		return nil
-	})
-	if err != nil {
-		t.Errorf("error while waiting for collector output: %s", err)
+	jsons := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(jsons) != 2 {
+		t.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
 	}
 
 	jsonSpans := ""
@@ -300,15 +259,11 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	var resSpans ResourceSpans
 	err = json.Unmarshal([]byte(jsonSpans), &resSpans)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	require.NoError(t, err)
 
 	var resMetrics ResourceMetrics
 	err = json.Unmarshal([]byte(jsonMetrics), &resMetrics)
-	if err != nil {
-		t.Error(err.Error())
-	}
+	require.NoError(t, err)
 
 	testReport := TestReport{
 		resourceSpans:   resSpans,
@@ -317,17 +272,19 @@ func Test_Main_SampleXML(t *testing.T) {
 
 	resourceSpans := testReport.resourceSpans.Spans[0]
 
-	srvNameAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.name")
-	assert.Equal(t, "service.name", srvNameAttribute.Key)
+	srvNameAttribute := requireAttributeInArray(t, resourceSpans.Resource.Attributes, "service.name")
+	require.NoError(t, err)
+	require.Equal(t, "service.name", srvNameAttribute.Key)
 	assertStringValueInAttribute(t, srvNameAttribute.Value, "jaeger-srv-test")
 
-	srvVersionAttribute, _ := findAttributeInArray(resourceSpans.Resource.Attributes, "service.version")
-	assert.Equal(t, "service.version", srvVersionAttribute.Key)
+	srvVersionAttribute := requireAttributeInArray(t, resourceSpans.Resource.Attributes, "service.version")
+	require.NoError(t, err)
+	require.Equal(t, "service.version", srvVersionAttribute.Key)
 	assertStringValueInAttribute(t, srvVersionAttribute.Value, "")
 
 	instrumentationLibrarySpans := resourceSpans.InstrumentationLibrarySpans[0]
 
-	assert.Equal(t, "jaeger-srv-test", instrumentationLibrarySpans.InstrumentationLibrary.Name)
+	require.Equal(t, "jaeger-srv-test", instrumentationLibrarySpans.InstrumentationLibrary.Name)
 
 	spans := instrumentationLibrarySpans.Spans
 
@@ -337,24 +294,27 @@ func Test_Main_SampleXML(t *testing.T) {
 	// 	 11 testcase elements
 	expectedSpansCount := 15
 
-	assert.Equal(t, expectedSpansCount, len(spans))
+	require.Equal(t, expectedSpansCount, len(spans))
 
 	aTestCase := spans[2]
-	assert.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
-	assert.Equal(t, "SPAN_KIND_INTERNAL", aTestCase.Kind)
+	require.Equal(t, "TestCheckConfigDirsCreatesWorkspaceAtHome", aTestCase.Name)
+	require.Equal(t, "SPAN_KIND_INTERNAL", aTestCase.Kind)
 
-	codeFunction, _ := findAttributeInArray(aTestCase.Attributes, "code.function")
+	codeFunction := requireAttributeInArray(t, aTestCase.Attributes, "code.function")
+	require.NoError(t, err)
 	assertStringValueInAttribute(t, codeFunction.Value, "TestCheckConfigDirsCreatesWorkspaceAtHome")
 
-	testClassName, _ := findAttributeInArray(aTestCase.Attributes, "tests.case.classname")
+	testClassName := requireAttributeInArray(t, aTestCase.Attributes, "tests.case.classname")
+	require.NoError(t, err)
 	assertStringValueInAttribute(t, testClassName.Value, "github.com/elastic/e2e-testing/cli/config")
 
-	goVersion, _ := findAttributeInArray(aTestCase.Attributes, "go.version")
+	goVersion := requireAttributeInArray(t, aTestCase.Attributes, "go.version")
+	require.NoError(t, err)
 	assertStringValueInAttribute(t, goVersion.Value, "go1.16.3 linux/amd64")
 
 	// last span is server type
 	aTestCase = spans[expectedSpansCount-1]
-	assert.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
+	require.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
 }
 
 func Test_GetServiceVariable(t *testing.T) {
@@ -384,51 +344,41 @@ func Test_GetServiceVariable(t *testing.T) {
 
 	for _, otlpotlpTest := range otlpTests {
 		t.Run(otlpotlpTest.otelVariable, func(t *testing.T) {
-			t.Run("Without environment variable and no flag retrieves fallback", func(t *testing.T) {
-				os.Unsetenv(otlpotlpTest.otelVariable)
+			t.Run("no-env/no-flag/fallback", func(t *testing.T) {
+				t.Setenv(otlpotlpTest.otelVariable, "")
 				otlpotlpTest.setFlag("")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, otlpotlpTest.fallback, actualValue)
+				require.Equal(t, otlpotlpTest.fallback, actualValue)
 			})
 
-			t.Run("With environment variable and no flag retrieves the variable", func(t *testing.T) {
-				os.Setenv(otlpotlpTest.otelVariable, "foobar")
+			t.Run("env/no-flag/env", func(t *testing.T) {
+				t.Setenv(otlpotlpTest.otelVariable, "foobar")
 				otlpotlpTest.setFlag("")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, "foobar", actualValue)
+				require.Equal(t, "foobar", actualValue)
 			})
 
-			t.Run("Without environment variable and flag retrieves the flag", func(t *testing.T) {
-				os.Unsetenv(otlpotlpTest.otelVariable)
+			t.Run("no-env/flag/flag", func(t *testing.T) {
+				t.Setenv(otlpotlpTest.otelVariable, "")
 				otlpotlpTest.setFlag("this-is-a-flag")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, "this-is-a-flag", actualValue)
+				require.Equal(t, "this-is-a-flag", actualValue)
 			})
 
-			t.Run("With environment variable and flag retrieves the flag", func(t *testing.T) {
-				os.Setenv(otlpotlpTest.otelVariable, "foobar")
-				otlpotlpTest.setFlag("")
-				defer resetEnvironment(otlpotlpTest.otelVariable)
+			t.Run("env/flag/flag", func(t *testing.T) {
+				t.Setenv(otlpotlpTest.otelVariable, "foobar")
+				otlpotlpTest.setFlag("this-is-a-flag")
 
 				actualValue := otlpotlpTest.getFn()
 
-				assert.Equal(t, "foobar", actualValue)
+				require.Equal(t, "this-is-a-flag", actualValue)
 			})
 		})
 	}
-}
-
-func resetEnvironment(otelVariable string) {
-	os.Setenv(otelVariable, originalEnvVar)
-
-	serviceNameFlag = originalServiceNameFlag
 }
