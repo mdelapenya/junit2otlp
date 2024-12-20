@@ -16,6 +16,9 @@ categories:
     labels:
       - 'docs'
       - 'documentation'
+  - title: '📦 Dependencies'
+    labels:
+      - 'dependencies'
   - title: '🧰 Maintenance'
     label: 'chore'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
