@@ -12,7 +12,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -208,11 +208,7 @@ func (r *FakeGitRepo) read() *GitScm {
 }
 
 func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -240,13 +236,8 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{Depth: 1})).read()
 			if scm == nil {
@@ -256,8 +247,8 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 			atts := scm.contributeAttributes()
 
 			// shallow clone depth is 3
-			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 3) }, "should be set as scm.git.clone.depth=3. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, true) }, "should be set as scm.git.clone.shallow=true. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 3) }, "should be set as scm.git.clone.depth=3. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, true) }, "should be set as scm.git.clone.shallow=true. Attributes: %v", atts)
 		})
 	}
 
@@ -267,11 +258,7 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -303,13 +290,8 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -318,22 +300,22 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 
 			atts := scm.contributeAttributes()
 
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 
 			if scm.changeRequest {
 				// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-				assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
-				assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
-				assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
+				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 			}
 
-			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
-			assert.Condition(t, func() bool {
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
+			require.Condition(t, func() bool {
 				return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
 			}, "Remote should be set as scm.repository. Attributes: %v", atts)
 		})
@@ -345,11 +327,7 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 }
 
 func TestGit_ContributeAttributesForBranches(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -377,13 +355,8 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 			if scm == nil {
@@ -392,21 +365,21 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 
 			atts := scm.contributeAttributes()
 
-			assert.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
+			require.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
+			require.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
 
 			if scm.changeRequest {
-				assert.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
-				assert.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
-				assert.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
+				require.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
 			}
 
-			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
-			assert.Condition(t, func() bool {
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
+			require.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
+			require.Condition(t, func() bool {
 				return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
 			}, "Remote should be set as scm.repository. Attributes: %v", atts)
 		})
@@ -418,11 +391,7 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 }
 
 func TestGit_ContributeCommitters(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	branchName := "this-is-a-test-branch"
 
@@ -454,13 +423,8 @@ func TestGit_ContributeCommitters(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -477,10 +441,10 @@ func TestGit_ContributeCommitters(t *testing.T) {
 				t.Error()
 			}
 
-			assert.Equal(t, 2, len(atts))
+			require.Equal(t, 2, len(atts))
 			// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 		})
 	}
 
@@ -490,11 +454,7 @@ func TestGit_ContributeCommitters(t *testing.T) {
 }
 
 func TestGit_ContributeFilesAndLines(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	branchName := "this-is-a-test-branch"
 
@@ -526,13 +486,8 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -550,11 +505,11 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 				t.Error()
 			}
 
-			assert.Equal(t, 3, len(atts))
+			require.Equal(t, 3, len(atts))
 			// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
-			assert.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 		})
 	}
 
@@ -564,11 +519,7 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	branchName := "this-is-a-test-branch"
 
@@ -600,13 +551,8 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
 			if scm == nil {
@@ -618,8 +564,8 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 				t.Error()
 			}
 
-			assert.NotNil(t, headCommit)
-			assert.NotNil(t, targetCommit)
+			require.NotNil(t, headCommit)
+			require.NotNil(t, targetCommit)
 		})
 	}
 
@@ -629,11 +575,7 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 }
 
 func TestGit_CalculateCommitsForBranches(t *testing.T) {
-	originalGithubSha := os.Getenv("GITHUB_SHA")
-	os.Unsetenv("GITHUB_SHA")
-	defer func() {
-		os.Setenv("GITHUB_SHA", originalGithubSha)
-	}()
+	t.Setenv("GITHUB_SHA", "")
 
 	type testData struct {
 		provider string
@@ -661,13 +603,8 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 	runTests := func(t *testing.T, td testData) {
 		t.Run(td.provider, func(t *testing.T) {
 			for k, v := range td.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
-			defer func() {
-				for k := range td.env {
-					os.Unsetenv(k)
-				}
-			}()
 
 			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).read()
 			if scm == nil {
@@ -679,7 +616,7 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 				t.Error()
 			}
 
-			assert.Equal(t, headCommit, targetCommit)
+			require.Equal(t, headCommit, targetCommit)
 		})
 	}
 
@@ -689,6 +626,8 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 }
 
 func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			return true
@@ -699,6 +638,8 @@ func keyExists(t *testing.T, attributes []attribute.KeyValue, key string) bool {
 }
 
 func keyExistsWithBoolValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...bool) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {
@@ -720,6 +661,8 @@ func keyExistsWithBoolValue(t *testing.T, attributes []attribute.KeyValue, key s
 }
 
 func keyExistsWithIntValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...int64) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {
@@ -741,6 +684,8 @@ func keyExistsWithIntValue(t *testing.T, attributes []attribute.KeyValue, key st
 }
 
 func keyExistsWithValue(t *testing.T, attributes []attribute.KeyValue, key string, value ...string) bool {
+	t.Helper()
+
 	for _, att := range attributes {
 		if string(att.Key) == key {
 			for _, v := range value {

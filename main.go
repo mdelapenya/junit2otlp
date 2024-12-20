@@ -215,7 +215,10 @@ type InputReader interface {
 type PipeReader struct{}
 
 func (pr *PipeReader) Read() ([]byte, error) {
-	stat, _ := os.Stdin.Stat()
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return nil, err
+	}
 
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		var buf []byte

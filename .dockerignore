@@ -3,7 +3,7 @@
 demos
 build
 dist
-testresources
+testdata
 
 .env
 .gitignore
