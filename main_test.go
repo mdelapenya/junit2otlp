@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/avast/retry-go"
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -178,24 +176,15 @@ func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontai
 					ContainerFilePath: "/tmp/tests.json",
 				},
 			},
+			WaitingFor: wait.ForListeningPort("4317/tcp"),
 		},
 		Started: true,
 	})
 	testcontainers.CleanupContainer(t, otelCollector)
 	require.NoError(t, err)
 
-	var collectorPort nat.Port
-	err = retry.Do(func() error {
-		collectorPort, err = otelCollector.MappedPort(ctx, "4317/tcp")
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		t.Errorf("could not get the collector port: %s", err)
-	}
+	collectorPort, err := otelCollector.MappedPort(ctx, "4317/tcp")
+	require.NoError(t, err)
 
 	t.Setenv(exporterEndpointKey, "http://localhost:"+collectorPort.Port())
 	t.Setenv("OTEL_EXPORTER_OTLP_SPAN_INSECURE", "true")
