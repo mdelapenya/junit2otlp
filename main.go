@@ -56,8 +56,6 @@ func init() {
 		semconv.OSNameKey.String(runtime.GOOS),
 	}
 
-	fmt.Printf("addAttributes: %v\n", addAttributes)
-
 	// add additional attributes if provided
 	if addAttributes != "" {
 		addAttrs := strings.Split(addAttributes, ",")
@@ -68,8 +66,6 @@ func init() {
 			}
 		}
 	}
-
-	fmt.Printf("runtimeAttributes: %v\n", runtimeAttributes)
 
 	propsAllowed = []string{}
 	if propertiesAllowedString != "" {
