@@ -23,4 +23,4 @@ jobs:
         id: go
 
       - name: Run Unit tests
-        run: go run gotest.tools/gotestsum --format short-verbose -- -timeout=5m ./...
+        run: make test

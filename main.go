@@ -33,6 +33,7 @@ var serviceNameFlag string
 var serviceVersionFlag string
 var traceNameFlag string
 var propertiesAllowedString string
+var addAttributes string
 
 const propertiesAllowAll = "all"
 
@@ -46,12 +47,29 @@ func init() {
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&propertiesAllowedString, "properties-allowed", propertiesAllowAll, "Comma separated list of properties to be allowed in the jUnit report")
+	flag.StringVar(&addAttributes, "add-attributes", "", "Comma separated list of attributes to be added to the jUnit report")
+	flag.Parse()
 
 	// initialize runtime keys
 	runtimeAttributes = []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
 		semconv.OSNameKey.String(runtime.GOOS),
 	}
+
+	fmt.Printf("addAttributes: %v\n", addAttributes)
+
+	// add additional attributes if provided
+	if addAttributes != "" {
+		addAttrs := strings.Split(addAttributes, ",")
+		for _, attr := range addAttrs {
+			kv := strings.Split(attr, "=")
+			if len(kv) == 2 {
+				runtimeAttributes = append(runtimeAttributes, attribute.Key(kv[0]).String(kv[1]))
+			}
+		}
+	}
+
+	fmt.Printf("runtimeAttributes: %v\n", runtimeAttributes)
 
 	propsAllowed = []string{}
 	if propertiesAllowedString != "" {
@@ -313,8 +331,6 @@ func Main(ctx context.Context, reader InputReader) error {
 }
 
 func main() {
-	flag.Parse()
-
 	if err := Main(context.Background(), &PipeReader{}); err != nil {
 		log.Fatal(err)
 	}
