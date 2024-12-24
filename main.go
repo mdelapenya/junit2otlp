@@ -279,6 +279,8 @@ func Main(ctx context.Context, reader InputReader) error {
 			kv := strings.Split(attr, "=")
 			if len(kv) == 2 {
 				runtimeAttributes = append(runtimeAttributes, attribute.Key(kv[0]).String(kv[1]))
+			} else {
+				log.Fatalf("FATAL: invalid attribute provided: %s", attr)
 			}
 		}
 	}
