@@ -69,6 +69,11 @@ func createIntCounter(meter metric.Meter, name string, description string) metri
 	return counter
 }
 
+func createFloat64Histogram(meter metric.Meter, name string, description string, unit string) metric.Float64Histogram {
+	histogram, _ := meter.Float64Histogram(name, metric.WithDescription(description), metric.WithUnit(unit))
+	return histogram
+}
+
 func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *sdktrace.TracerProvider, suites []junit.Suite) error {
 	tracer := tracesProvides.Tracer(srvName)
 	meter := otel.Meter(srvName)
@@ -79,60 +84,104 @@ func createTracesAndSpans(ctx context.Context, srvName string, tracesProvides *s
 		runtimeAttributes = append(runtimeAttributes, scmAttributes...)
 	}
 
-	durationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
-	errorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
-	failedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
-	passedCounter := createIntCounter(meter, PassedTestsCount, "Total number of passed tests")
-	skippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
-	testsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
+	// test suite metrics
+	suiteErrorCounter := createIntCounter(meter, ErrorTestsCount, "Total number of failed tests")
+	suiteFailedCounter := createIntCounter(meter, FailedTestsCount, "Total number of failed tests")
+	suiteSkippedCounter := createIntCounter(meter, SkippedTestsCount, "Total number of skipped tests")
+	suitePassedCounter := createIntCounter(meter, PassedTestsCount, "Total number of passed tests")
+	suiteTestsCounter := createIntCounter(meter, TotalTestsCount, "Total number of executed tests")
+	suiteDurationCounter := createIntCounter(meter, TestsDuration, "Duration of the tests")
+	suiteDurationHistogram := createFloat64Histogram(meter, TestsDurationHist, "Duration of the tests", "s")
 
-	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...), trace.WithSpanKind(trace.SpanKindServer))
+	// test case metrics
+	caseFailedCounter := createIntCounter(meter, CaseFailedCount, "Total number of failed tests")
+	caseErrorCounter := createIntCounter(meter, CaseErrorCount, "Total number of error tests")
+	casePassedCounter := createIntCounter(meter, CasePassedCount, "Total number of passed tests")
+	caseSkippedCounter := createIntCounter(meter, CaseSkippedCount, "Total number of skipped tests")
+	caseDurationCounter := createIntCounter(meter, CaseDuration, "Duration of the tests")
+	caseDurationHistogram := createFloat64Histogram(meter, CaseDurationHist, "Duration of the tests", "s")
+
+	// outer span for the whole report
+	ctx, outerSpan := tracer.Start(ctx, traceNameFlag, trace.WithAttributes(runtimeAttributes...),
+		trace.WithSpanKind(trace.SpanKindServer))
 	defer outerSpan.End()
 
 	for _, suite := range suites {
 		totals := suite.Totals
 
+		// attributes for the suite that are common for metrics and spans
 		suiteAttributes := []attribute.KeyValue{
 			semconv.CodeNamespaceKey.String(suite.Package),
 			attribute.Key(TestsSuiteName).String(suite.Name),
-			attribute.Key(TestsSystemErr).String(suite.SystemErr),
-			attribute.Key(TestsSystemOut).String(suite.SystemOut),
-			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
 		}
-
 		suiteAttributes = append(suiteAttributes, runtimeAttributes...)
 		suiteAttributes = append(suiteAttributes, propsToLabels(suite.Properties)...)
 
-		attributeSet := attribute.NewSet(suiteAttributes...)
-		metricAttributes := metric.WithAttributeSet(attributeSet)
+		metricAttributes := metric.WithAttributes(suiteAttributes...)
 
-		durationCounter.Add(ctx, totals.Duration.Milliseconds(), metricAttributes)
-		errorCounter.Add(ctx, int64(totals.Error), metricAttributes)
-		failedCounter.Add(ctx, int64(totals.Failed), metricAttributes)
-		passedCounter.Add(ctx, int64(totals.Passed), metricAttributes)
-		skippedCounter.Add(ctx, int64(totals.Skipped), metricAttributes)
-		testsCounter.Add(ctx, int64(totals.Tests), metricAttributes)
+		// metrics for the suite
+		suiteErrorCounter.Add(ctx, int64(totals.Error), metricAttributes)
+		suiteFailedCounter.Add(ctx, int64(totals.Failed), metricAttributes)
+		suiteSkippedCounter.Add(ctx, int64(totals.Skipped), metricAttributes)
+		suitePassedCounter.Add(ctx, int64(totals.Passed), metricAttributes)
+		suiteTestsCounter.Add(ctx, int64(totals.Tests), metricAttributes)
 
-		ctx, suiteSpan := tracer.Start(ctx, suite.Name, trace.WithAttributes(suiteAttributes...))
+		suiteDurationCounter.Add(ctx, totals.Duration.Milliseconds(), metricAttributes)
+		suiteDurationHistogram.Record(ctx, totals.Duration.Seconds(), metricAttributes)
+
+		// attributes for the suite span
+		suiteSpanAttributes := append([]attribute.KeyValue{}, suiteAttributes...)
+		suiteSpanAttributes = append(suiteSpanAttributes,
+			attribute.Key(TestsDuration).Int64(suite.Totals.Duration.Milliseconds()),
+			attribute.Key(TestsSystemErr).String(suite.SystemErr),
+			attribute.Key(TestsSystemOut).String(suite.SystemOut),
+		)
+
+		// start the suite span
+		ctx, suiteSpan := tracer.Start(ctx, suite.Name, trace.WithAttributes(suiteSpanAttributes...))
+
+		// iterate tests and add metrics and spans
 		for _, test := range suite.Tests {
+			// attributes for the test case that are common for metrics and spans
 			testAttributes := []attribute.KeyValue{
 				semconv.CodeFunctionKey.String(test.Name),
-				attribute.Key(TestDuration).Int64(test.Duration.Milliseconds()),
 				attribute.Key(TestClassName).String(test.Classname),
+			}
+			testAttributes = append(testAttributes, suiteAttributes...)
+			testAttributes = append(testAttributes, runtimeAttributes...)
+			testAttributes = append(testAttributes, propsToLabels(test.Properties)...)
+
+			metricAttributes := metric.WithAttributes(testAttributes...)
+
+			// metrics for the test case
+			if test.Status == junit.StatusError {
+				caseErrorCounter.Add(ctx, 1, metricAttributes)
+			} else if test.Status == junit.StatusFailed {
+				caseFailedCounter.Add(ctx, 1, metricAttributes)
+			} else if test.Status == junit.StatusPassed {
+				casePassedCounter.Add(ctx, 1, metricAttributes)
+			} else if test.Status == junit.StatusSkipped {
+				caseSkippedCounter.Add(ctx, 1, metricAttributes)
+			}
+
+			caseDurationCounter.Add(ctx, test.Duration.Milliseconds(), metricAttributes)
+			caseDurationHistogram.Record(ctx, test.Duration.Seconds(), metricAttributes)
+
+			// attributes for the test span
+			testSpanAttributes := append([]attribute.KeyValue{}, testAttributes...)
+			testSpanAttributes = append(testSpanAttributes,
+				attribute.Key(TestDuration).Int64(test.Duration.Milliseconds()),
 				attribute.Key(TestMessage).String(test.Message),
 				attribute.Key(TestStatus).String(string(test.Status)),
 				attribute.Key(TestSystemErr).String(test.SystemErr),
 				attribute.Key(TestSystemOut).String(test.SystemOut),
-			}
-
-			testAttributes = append(testAttributes, propsToLabels(test.Properties)...)
-			testAttributes = append(testAttributes, suiteAttributes...)
+			)
 
 			if test.Error != nil {
-				testAttributes = append(testAttributes, attribute.Key(TestError).String(test.Error.Error()))
+				testSpanAttributes = append(testSpanAttributes, attribute.Key(TestError).String(test.Error.Error()))
 			}
 
-			_, testSpan := tracer.Start(ctx, test.Name, trace.WithAttributes(testAttributes...))
+			_, testSpan := tracer.Start(ctx, test.Name, trace.WithAttributes(testSpanAttributes...))
 			testSpan.End()
 		}
 
