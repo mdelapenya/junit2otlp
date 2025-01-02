@@ -33,7 +33,7 @@ var serviceNameFlag string
 var serviceVersionFlag string
 var traceNameFlag string
 var propertiesAllowedString string
-var addAttributes string
+var additionalAttributes string
 
 const propertiesAllowAll = "all"
 
@@ -47,7 +47,7 @@ func init() {
 	flag.StringVar(&serviceVersionFlag, "service-version", "", "OpenTelemetry Service Version to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&traceNameFlag, "trace-name", Junit2otlp, "OpenTelemetry Trace Name to be used when sending traces and metrics for the jUnit report")
 	flag.StringVar(&propertiesAllowedString, "properties-allowed", propertiesAllowAll, "Comma separated list of properties to be allowed in the jUnit report")
-	flag.StringVar(&addAttributes, "add-attributes", "", "Comma separated list of attributes to be added to the jUnit report")
+	flag.StringVar(&additionalAttributes, "additional-attributes", "", "Comma separated list of attributes to be added to the jUnit report")
 
 	// initialize runtime keys
 	runtimeAttributes = []attribute.KeyValue{
@@ -273,14 +273,14 @@ func Main(ctx context.Context, reader InputReader) error {
 	ctx = initOtelContext(ctx)
 
 	// add additional attributes if provided to the runtime attributes
-	if addAttributes != "" {
-		addAttrs := strings.Split(addAttributes, ",")
+	if additionalAttributes != "" {
+		addAttrs := strings.Split(additionalAttributes, ",")
 		for _, attr := range addAttrs {
 			kv := strings.Split(attr, "=")
 			if len(kv) == 2 {
 				runtimeAttributes = append(runtimeAttributes, attribute.Key(kv[0]).String(kv[1]))
 			} else {
-				log.Fatalf("FATAL: invalid attribute provided: %s", attr)
+				return fmt.Errorf("invalid attribute provided: %s", attr)
 			}
 		}
 	}
