@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -274,7 +275,7 @@ func Main(ctx context.Context, reader InputReader) error {
 
 	// add additional attributes if provided to the runtime attributes
 	if additionalAttributes != "" {
-		additionalAttrsErrors := []string{}
+		additionalAttrsErrors := []error{}
 
 		addAttrs := strings.Split(additionalAttributes, ",")
 		for _, attr := range addAttrs {
@@ -283,13 +284,12 @@ func Main(ctx context.Context, reader InputReader) error {
 				runtimeAttributes = append(runtimeAttributes, attribute.Key(kv[0]).String(kv[1]))
 			} else {
 				additionalAttrsErrors = append(additionalAttrsErrors,
-					fmt.Sprintf("invalid attribute: %s", attr))
+					fmt.Errorf("invalid attribute: %s", attr))
 			}
 		}
 
-		if len(additionalAttrsErrors) > 0 {
-			return fmt.Errorf("failed to add additional attributes: %s",
-				strings.Join(additionalAttrsErrors, ", "))
+		if err := errors.Join(additionalAttrsErrors...); err != nil {
+			return fmt.Errorf("failed to add additional attributes: %w", err)
 		}
 	}
 
