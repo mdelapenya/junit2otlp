@@ -255,6 +255,15 @@ It will use the Elastic Stack as back-end, sending the traces, spans and metrics
 ```shell
 make demo-start-elastic
 go build && chmod +x ./junit2otlp
+
+export OTEL_EXPORTER_OTLP_INSECURE="true"
+export OTEL_EXPORTER_OTLP_METRIC_INSECURE="true"
+export OTEL_SERVICE_NAME="elastic-srv"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:8200"
+export OTEL_EXPORTER_OTLP_SPAN_INSECURE="true"
+export OTEL_EXPORTER_OTLP_HEADERS=""
+export TARGET_BRANCH=main
+export BRANCH=main
 cat TEST-sample.xml | ./junit2otlp
 cat TEST-sample2.xml | ./junit2otlp
 cat TEST-sample3.xml | ./junit2otlp
@@ -266,6 +275,14 @@ It will use Jaeger as back-end, sending the traces, spans and metrics through th
 
 ```shell
 make demo-start-jaeger
+export OTEL_EXPORTER_OTLP_INSECURE="true"
+export OTEL_EXPORTER_OTLP_METRIC_INSECURE="true"
+export OTEL_SERVICE_NAME="jaeger-srv"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:14317"
+export OTEL_EXPORTER_OTLP_SPAN_INSECURE="true"
+export OTEL_EXPORTER_OTLP_HEADERS=""
+export TARGET_BRANCH=main
+export BRANCH=main
 go build && chmod +x ./junit2otlp
 cat TEST-sample.xml | ./junit2otlp
 cat TEST-sample2.xml | ./junit2otlp
@@ -279,6 +296,15 @@ It will use Prometheus as back-end, sending the traces, spans and metrics throug
 ```shell
 make demo-start-prometheus
 go build && chmod +x ./junit2otlp
+
+export OTEL_EXPORTER_OTLP_INSECURE="true"
+export OTEL_EXPORTER_OTLP_METRIC_INSECURE="true"
+export OTEL_SERVICE_NAME="prometheus-srv"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:14317"
+export OTEL_EXPORTER_OTLP_SPAN_INSECURE="true"
+export OTEL_EXPORTER_OTLP_HEADERS=""
+export TARGET_BRANCH=main
+export BRANCH=main
 cat TEST-sample.xml | ./junit2otlp
 cat TEST-sample2.xml | ./junit2otlp
 cat TEST-sample3.xml | ./junit2otlp
@@ -291,6 +317,15 @@ It will use Prometheus as back-end, sending the traces, spans and metrics throug
 ```shell
 make demo-start-zipkin
 go build && chmod +x ./junit2otlp
+
+export OTEL_EXPORTER_OTLP_INSECURE="true"
+export OTEL_EXPORTER_OTLP_METRIC_INSECURE="true"
+export OTEL_SERVICE_NAME="zipkin-srv"
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:14317"
+export OTEL_EXPORTER_OTLP_SPAN_INSECURE="true"
+export OTEL_EXPORTER_OTLP_HEADERS=""
+export TARGET_BRANCH=main
+export BRANCH=main
 cat TEST-sample.xml | ./junit2otlp
 cat TEST-sample2.xml | ./junit2otlp
 cat TEST-sample3.xml | ./junit2otlp
