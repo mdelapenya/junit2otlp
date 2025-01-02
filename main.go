@@ -274,14 +274,22 @@ func Main(ctx context.Context, reader InputReader) error {
 
 	// add additional attributes if provided to the runtime attributes
 	if additionalAttributes != "" {
+		additionalAttrsErrors := []string{}
+
 		addAttrs := strings.Split(additionalAttributes, ",")
 		for _, attr := range addAttrs {
 			kv := strings.Split(attr, "=")
 			if len(kv) == 2 {
 				runtimeAttributes = append(runtimeAttributes, attribute.Key(kv[0]).String(kv[1]))
 			} else {
-				return fmt.Errorf("invalid attribute provided: %s", attr)
+				additionalAttrsErrors = append(additionalAttrsErrors,
+					fmt.Sprintf("invalid attribute: %s", attr))
 			}
+		}
+
+		if len(additionalAttrsErrors) > 0 {
+			return fmt.Errorf("failed to add additional attributes: %s",
+				strings.Join(additionalAttrsErrors, ", "))
 		}
 	}
 
