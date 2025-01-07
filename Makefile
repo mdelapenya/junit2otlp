@@ -51,3 +51,6 @@ demo-start-zipkin:
 
 demo-stop-zipkin:
 	$(call stop_demo,zipkin)
+
+test:
+	go run gotest.tools/gotestsum --debug --format short-verbose -- -timeout=5m ./...
