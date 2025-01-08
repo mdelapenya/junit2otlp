@@ -40,6 +40,24 @@ type Config struct {
 	SkipMetrics bool
 }
 
+func NewConfigFromDefaults() *Config {
+	return &Config{
+		RepositoryPath: GetDefaultwd(),
+
+		ServiceName:          "",
+		ServiceVersion:       "",
+		TraceName:            Junit2otlp,
+		AdditionalAttributes: nil,
+
+		allPropertiesAllowed: true,
+		propertiesAllowed:    []string{},
+
+		BatchSize:   10,
+		SkipTraces:  false,
+		SkipMetrics: false,
+	}
+}
+
 func NewConfigFromArgs() (*Config, error) {
 	const defaultMaxBatchSize = 10
 
