@@ -1,9 +1,15 @@
-package main
+package scm
 
 import (
 	"os"
 	"path"
+
+	"go.opentelemetry.io/otel/attribute"
 )
+
+type OTELAttributesContributor interface {
+	ContributeAttributes() []attribute.KeyValue
+}
 
 type Scm interface {
 	OTELAttributesContributor

@@ -1,4 +1,4 @@
-package main
+package scm
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/mdelapenya/junit2otlp/internal/otel"
 	"github.com/pkg/errors"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -90,14 +91,14 @@ func (scm *GitScm) calculateCommits() (*object.Commit, *object.Commit, error) {
 
 // contributeAttributes this method never fails, returning the current state of the contributed attributes
 // at the moment of the failure
-func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
+func (scm *GitScm) ContributeAttributes() []attribute.KeyValue {
 	// from now on, this is a Git repository
 	gitAttributes := []attribute.KeyValue{
-		attribute.Key(ScmType).String("git"),
+		attribute.Key(otel.ScmType).String("git"),
 	}
 
 	if scm.provider != "" {
-		gitAttributes = append(gitAttributes, attribute.Key(ScmProvider).String(scm.provider))
+		gitAttributes = append(gitAttributes, attribute.Key(otel.ScmProvider).String(scm.provider))
 	}
 
 	shallow, err := scm.repository.Storer.Shallow()
@@ -106,21 +107,21 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	}
 
 	if shallow == nil {
-		gitAttributes = append(gitAttributes, attribute.Key(GitCloneShallow).Bool(false))
-		gitAttributes = append(gitAttributes, attribute.Key(GitCloneDepth).Int(0))
+		gitAttributes = append(gitAttributes, attribute.Key(otel.GitCloneShallow).Bool(false))
+		gitAttributes = append(gitAttributes, attribute.Key(otel.GitCloneDepth).Int(0))
 	} else {
-		gitAttributes = append(gitAttributes, attribute.Key(GitCloneShallow).Bool(len(shallow) != 0))
-		gitAttributes = append(gitAttributes, attribute.Key(GitCloneDepth).Int(len(shallow)))
+		gitAttributes = append(gitAttributes, attribute.Key(otel.GitCloneShallow).Bool(len(shallow) != 0))
+		gitAttributes = append(gitAttributes, attribute.Key(otel.GitCloneDepth).Int(len(shallow)))
 	}
 
 	origin, err := scm.repository.Remote("origin")
 	if err != nil {
 		return gitAttributes
 	}
-	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(origin.Config().URLs))
+	gitAttributes = append(gitAttributes, attribute.Key(otel.ScmRepository).StringSlice(origin.Config().URLs))
 
 	// do not read HEAD, and simply use the branch name coming from the SCM struct
-	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(scm.branchName))
+	gitAttributes = append(gitAttributes, attribute.Key(otel.ScmBranch).String(scm.branchName))
 
 	headCommit, targetCommit, err := scm.calculateCommits()
 	if err != nil {
@@ -133,7 +134,7 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 
 	if scm.changeRequest {
 		if scm.baseRef != "" {
-			gitAttributes = append(gitAttributes, attribute.Key(ScmBaseRef).String(scm.baseRef))
+			gitAttributes = append(gitAttributes, attribute.Key(otel.ScmBaseRef).String(scm.baseRef))
 		}
 
 		// calculate modified lines for pull/merge requests
@@ -190,11 +191,11 @@ func (scm *GitScm) contributeCommitters(headCommit *object.Commit, targetCommit 
 	})
 
 	if len(authors) > 0 {
-		attributes = append(attributes, attribute.Key(ScmAuthors).StringSlice(mapToArray(authors)))
+		attributes = append(attributes, attribute.Key(otel.ScmAuthors).StringSlice(mapToArray(authors)))
 	}
 
 	if len(committers) > 0 {
-		attributes = append(attributes, attribute.Key(ScmCommitters).StringSlice(mapToArray(committers)))
+		attributes = append(attributes, attribute.Key(otel.ScmCommitters).StringSlice(mapToArray(committers)))
 	}
 
 	return
@@ -235,9 +236,9 @@ func (scm *GitScm) contributeFilesAndLines(headCommit *object.Commit, targetComm
 		changedFiles = append(changedFiles, fileStat.Name)
 	}
 
-	attributes = append(attributes, attribute.Key(GitAdditions).Int(additions))
-	attributes = append(attributes, attribute.Key(GitDeletions).Int(deletions))
-	attributes = append(attributes, attribute.Key(GitModifiedFiles).Int(len(changedFiles)))
+	attributes = append(attributes, attribute.Key(otel.GitAdditions).Int(additions))
+	attributes = append(attributes, attribute.Key(otel.GitDeletions).Int(deletions))
+	attributes = append(attributes, attribute.Key(otel.GitModifiedFiles).Int(len(changedFiles)))
 
 	return
 }

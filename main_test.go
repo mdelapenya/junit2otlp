@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mdelapenya/junit2otlp/internal/config"
+	"github.com/mdelapenya/junit2otlp/internal/readers"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/network"
@@ -19,19 +21,6 @@ import (
 )
 
 const exporterEndpointKey = "OTEL_EXPORTER_OTLP_ENDPOINT"
-
-type TestReader struct {
-	testFile string
-}
-
-func (tr *TestReader) Read() ([]byte, error) {
-	b, err := os.ReadFile(tr.testFile)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return b, nil
-}
 
 type TestAttributeValue struct {
 	IntValue    string `json:"intValue"`
@@ -196,19 +185,22 @@ func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontai
 	return ctx, reportFilePath, otelCollector
 }
 
-func Test_Main_SampleXML(t *testing.T) {
+func Test_Run_SampleXML(t *testing.T) {
 	t.Setenv("BRANCH", "main")
-	batchSizeFlag = 25
 
 	ctx, reportFilePath, otelCollector := setupRuntimeDependencies(t)
-
 	defer func() {
-		batchSizeFlag = defaultMaxBatchSize
-		// clean up test report
 		os.Remove(reportFilePath)
 	}()
 
-	err := Main(context.Background(), &TestReader{testFile: "TEST-sample.xml"})
+	cfg, err := config.NewConfigFromArgs()
+	require.NoError(t, err)
+
+	cfg.BatchSize = 25
+
+	reader := readers.NewFileReader("TEST-sample.xml")
+
+	err = Run(context.Background(), cfg, reader)
 	require.NoError(t, err)
 
 	// wait for the file to be written by the otel-exporter
@@ -229,35 +221,30 @@ func Test_Main_SampleXML(t *testing.T) {
 	// 1. get the spans and metrics JSONs, they are separated by \n
 	// 2. remote white spaces
 	// 3. unmarshal each resource separately
-	// 4. assign each resource to the test report struct
-	jsons := strings.Split(strings.TrimSpace(out.String()), "\n")
-	if len(jsons) != 2 {
-		t.Errorf("expected 2 JSONs, got %d - %s", len(jsons), jsons)
-	}
-
-	jsonSpans := ""
-	jsonMetrics := ""
-	// the order of the lines is not guaranteed
-	if strings.Contains(jsons[0], "resourceSpans") {
-		jsonSpans = strings.TrimSpace(jsons[0])
-		jsonMetrics = strings.TrimSpace(jsons[1])
-	} else {
-		jsonSpans = strings.TrimSpace(jsons[1])
-		jsonMetrics = strings.TrimSpace(jsons[0])
-	}
-
-	var resSpans ResourceSpans
-	err = json.Unmarshal([]byte(jsonSpans), &resSpans)
-	require.NoError(t, err)
-
-	var resMetrics ResourceMetrics
-	err = json.Unmarshal([]byte(jsonMetrics), &resMetrics)
-	require.NoError(t, err)
-
+	// 4. append resources to the test report struct
 	testReport := TestReport{
-		resourceSpans:   resSpans,
-		resourceMetrics: resMetrics,
+		resourceSpans:   ResourceSpans{},
+		resourceMetrics: ResourceMetrics{},
 	}
+
+	jsons := strings.Split(strings.TrimSpace(out.String()), "\n")
+	for _, jsonStr := range jsons {
+		if strings.Contains(jsonStr, "resourceSpans") {
+			spans := ResourceSpans{}
+			err = json.Unmarshal([]byte(jsonStr), &spans)
+			require.NoError(t, err)
+
+			testReport.resourceSpans.Spans = append(testReport.resourceSpans.Spans, spans.Spans...)
+		} else {
+			metrics := ResourceMetrics{}
+			err = json.Unmarshal([]byte(jsonStr), &metrics)
+			require.NoError(t, err)
+
+			testReport.resourceMetrics.Metrics = append(testReport.resourceMetrics.Metrics, metrics.Metrics...)
+		}
+	}
+
+	fmt.Printf("Spans: %v\n", testReport.resourceSpans)
 
 	resourceSpans := testReport.resourceSpans.Spans[0]
 
@@ -304,70 +291,4 @@ func Test_Main_SampleXML(t *testing.T) {
 	// last span is server type
 	aTestCase = spans[expectedSpansCount-1]
 	require.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
-}
-
-func Test_GetServiceVariable(t *testing.T) {
-	var otlpTests = []struct {
-		fallback     string
-		getFn        func() string
-		setFlag      func(string)
-		otelVariable string
-	}{
-		{
-			fallback: Junit2otlp,
-			getFn:    getOtlpServiceName,
-			setFlag: func(value string) {
-				serviceNameFlag = value
-			},
-			otelVariable: "OTEL_SERVICE_NAME",
-		},
-		{
-			fallback: "",
-			getFn:    getOtlpServiceVersion,
-			setFlag: func(value string) {
-				serviceVersionFlag = value
-			},
-			otelVariable: "OTEL_SERVICE_VERSION",
-		},
-	}
-
-	for _, otlpotlpTest := range otlpTests {
-		t.Run(otlpotlpTest.otelVariable, func(t *testing.T) {
-			t.Run("no-env/no-flag/fallback", func(t *testing.T) {
-				t.Setenv(otlpotlpTest.otelVariable, "")
-				otlpotlpTest.setFlag("")
-
-				actualValue := otlpotlpTest.getFn()
-
-				require.Equal(t, otlpotlpTest.fallback, actualValue)
-			})
-
-			t.Run("env/no-flag/env", func(t *testing.T) {
-				t.Setenv(otlpotlpTest.otelVariable, "foobar")
-				otlpotlpTest.setFlag("")
-
-				actualValue := otlpotlpTest.getFn()
-
-				require.Equal(t, "foobar", actualValue)
-			})
-
-			t.Run("no-env/flag/flag", func(t *testing.T) {
-				t.Setenv(otlpotlpTest.otelVariable, "")
-				otlpotlpTest.setFlag("this-is-a-flag")
-
-				actualValue := otlpotlpTest.getFn()
-
-				require.Equal(t, "this-is-a-flag", actualValue)
-			})
-
-			t.Run("env/flag/flag", func(t *testing.T) {
-				t.Setenv(otlpotlpTest.otelVariable, "foobar")
-				otlpotlpTest.setFlag("this-is-a-flag")
-
-				actualValue := otlpotlpTest.getFn()
-
-				require.Equal(t, "this-is-a-flag", actualValue)
-			})
-		})
-	}
 }
