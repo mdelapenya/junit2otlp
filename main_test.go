@@ -193,58 +193,16 @@ func Test_Run_SampleXML(t *testing.T) {
 		os.Remove(reportFilePath)
 	}()
 
-	cfg, err := config.NewConfigFromArgs()
-	require.NoError(t, err)
-
+	cfg := config.NewConfigFromDefaults()
+	cfg.ServiceName = "jaeger-srv-test"
 	cfg.BatchSize = 25
 
 	reader := readers.NewFileReader("TEST-sample.xml")
 
-	err = Run(context.Background(), cfg, reader)
+	err := Run(context.Background(), cfg, reader)
 	require.NoError(t, err)
 
-	// wait for the file to be written by the otel-exporter
-	var out bytes.Buffer
-	err = wait.ForFile("/tmp/tests.json").
-		WithStartupTimeout(time.Second*10).
-		WithPollInterval(time.Second).
-		WithMatcher(func(r io.Reader) error {
-			if _, err := io.Copy(&out, r); err != nil {
-				return fmt.Errorf("copy: %w", err)
-			}
-			return nil
-		}).WaitUntilReady(ctx, otelCollector)
-	require.NoError(t, err)
-
-	// assert using the generated file
-	// merge both JSON files
-	// 1. get the spans and metrics JSONs, they are separated by \n
-	// 2. remote white spaces
-	// 3. unmarshal each resource separately
-	// 4. append resources to the test report struct
-	testReport := TestReport{
-		resourceSpans:   ResourceSpans{},
-		resourceMetrics: ResourceMetrics{},
-	}
-
-	jsons := strings.Split(strings.TrimSpace(out.String()), "\n")
-	for _, jsonStr := range jsons {
-		if strings.Contains(jsonStr, "resourceSpans") {
-			spans := ResourceSpans{}
-			err = json.Unmarshal([]byte(jsonStr), &spans)
-			require.NoError(t, err)
-
-			testReport.resourceSpans.Spans = append(testReport.resourceSpans.Spans, spans.Spans...)
-		} else {
-			metrics := ResourceMetrics{}
-			err = json.Unmarshal([]byte(jsonStr), &metrics)
-			require.NoError(t, err)
-
-			testReport.resourceMetrics.Metrics = append(testReport.resourceMetrics.Metrics, metrics.Metrics...)
-		}
-	}
-
-	fmt.Printf("Spans: %v\n", testReport.resourceSpans)
+	testReport := readTestReport(t, ctx, otelCollector)
 
 	resourceSpans := testReport.resourceSpans.Spans[0]
 
@@ -291,4 +249,105 @@ func Test_Run_SampleXML(t *testing.T) {
 	// last span is server type
 	aTestCase = spans[expectedSpansCount-1]
 	require.Equal(t, "SPAN_KIND_SERVER", aTestCase.Kind)
+}
+
+func Test_Run_NoMetrics(t *testing.T) {
+	t.Setenv("BRANCH", "main")
+
+	ctx, reportFilePath, otelCollector := setupRuntimeDependencies(t)
+	defer func() {
+		os.Remove(reportFilePath)
+	}()
+
+	cfg := config.NewConfigFromDefaults()
+	cfg.ServiceName = "jaeger-srv-test"
+	cfg.SkipMetrics = true
+	cfg.BatchSize = 25
+
+	reader := readers.NewFileReader("TEST-sample.xml")
+
+	err := Run(context.Background(), cfg, reader)
+	require.NoError(t, err)
+
+	testReport := readTestReport(t, ctx, otelCollector)
+
+	resourceSpans := testReport.resourceSpans.Spans[0]
+	instrumentationLibrarySpans := resourceSpans.InstrumentationLibrarySpans[0]
+	spans := instrumentationLibrarySpans.Spans
+	require.Equal(t, 15, len(spans))
+
+	// there should be no metrics
+	require.Empty(t, testReport.resourceMetrics.Metrics)
+}
+
+func Test_Run_NoTraces(t *testing.T) {
+	t.Setenv("BRANCH", "main")
+
+	ctx, reportFilePath, otelCollector := setupRuntimeDependencies(t)
+	defer func() {
+		os.Remove(reportFilePath)
+	}()
+
+	cfg := config.NewConfigFromDefaults()
+	cfg.ServiceName = "jaeger-srv-test"
+	cfg.SkipTraces = true
+	cfg.BatchSize = 25
+
+	reader := readers.NewFileReader("TEST-sample.xml")
+
+	err := Run(context.Background(), cfg, reader)
+	require.NoError(t, err)
+
+	testReport := readTestReport(t, ctx, otelCollector)
+
+	// there should be no spans
+	require.Empty(t, testReport.resourceSpans.Spans)
+
+	// there should be metrics
+	require.NotEmpty(t, testReport.resourceMetrics.Metrics)
+}
+
+func readTestReport(t *testing.T, ctx context.Context, otelCollector testcontainers.Container) TestReport {
+	// wait for the file to be written by the otel-exporter
+	var out bytes.Buffer
+	err := wait.ForFile("/tmp/tests.json").
+		WithStartupTimeout(time.Second*10).
+		WithPollInterval(time.Second).
+		WithMatcher(func(r io.Reader) error {
+			if _, err := io.Copy(&out, r); err != nil {
+				return fmt.Errorf("copy: %w", err)
+			}
+			return nil
+		}).WaitUntilReady(ctx, otelCollector)
+	require.NoError(t, err)
+
+	// assert using the generated file
+	// merge both JSON files
+	// 1. get the spans and metrics JSONs, they are separated by \n
+	// 2. remote white spaces
+	// 3. unmarshal each resource separately
+	// 4. append resources to the test report struct
+	testReport := TestReport{
+		resourceSpans:   ResourceSpans{},
+		resourceMetrics: ResourceMetrics{},
+	}
+
+	jsons := strings.Split(strings.TrimSpace(out.String()), "\n")
+	for _, jsonStr := range jsons {
+		if strings.Contains(jsonStr, "resourceSpans") {
+			spans := ResourceSpans{}
+			err = json.Unmarshal([]byte(jsonStr), &spans)
+			require.NoError(t, err)
+
+			testReport.resourceSpans.Spans = append(testReport.resourceSpans.Spans, spans.Spans...)
+		} else {
+			metrics := ResourceMetrics{}
+			err = json.Unmarshal([]byte(jsonStr), &metrics)
+			require.NoError(t, err)
+
+			testReport.resourceMetrics.Metrics = append(testReport.resourceMetrics.Metrics, metrics.Metrics...)
+		}
+	}
+
+	return testReport
 }
