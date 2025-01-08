@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+const defaultMaxBatchSize = 10
 const propertiesAllowAll = "all"
 const Junit2otlp = "junit2otlp"
 
@@ -47,20 +48,18 @@ func NewConfigFromDefaults() *Config {
 		ServiceName:          "",
 		ServiceVersion:       "",
 		TraceName:            Junit2otlp,
-		AdditionalAttributes: nil,
+		AdditionalAttributes: []attribute.KeyValue{},
 
 		allPropertiesAllowed: true,
 		propertiesAllowed:    []string{},
 
-		BatchSize:   10,
+		BatchSize:   defaultMaxBatchSize,
 		SkipTraces:  false,
 		SkipMetrics: false,
 	}
 }
 
 func NewConfigFromArgs() (*Config, error) {
-	const defaultMaxBatchSize = 10
-
 	var batchSizeFlag int
 	var repositoryPathFlag string
 	var serviceNameFlag string
