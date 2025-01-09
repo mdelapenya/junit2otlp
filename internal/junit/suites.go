@@ -1,11 +1,12 @@
-package transform
+package junit
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/joshdk/go-junit"
 	"github.com/mdelapenya/junit2otlp/internal/config"
 	"github.com/mdelapenya/junit2otlp/internal/otel"
+	"github.com/mdelapenya/junit2otlp/internal/readers"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -17,9 +18,12 @@ type OtelProvider interface {
 	Meter(string) metric.Meter
 }
 
-func TransformAndLoadSuites(ctx context.Context, cfg *config.Config, provider OtelProvider,
-	suites []junit.Suite, runtimeAttributes []attribute.KeyValue) error {
-	ctx = otel.InitOtelContext(ctx)
+func ExtractTransformAndLoadReport(ctx context.Context, cfg *config.Config,
+	reader readers.InputReader, runtimeAttributes []attribute.KeyValue, provider OtelProvider) error {
+	suites, err := readers.ReadJUnitReport(reader)
+	if err != nil {
+		return fmt.Errorf("failed to read JUnit report: %w", err)
+	}
 
 	tracer := provider.Tracer(cfg.ServiceName)
 	meter := provider.Meter(cfg.ServiceName)

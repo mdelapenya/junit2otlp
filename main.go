@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/mdelapenya/junit2otlp/internal/config"
+	"github.com/mdelapenya/junit2otlp/internal/junit"
 	"github.com/mdelapenya/junit2otlp/internal/otel"
 	"github.com/mdelapenya/junit2otlp/internal/readers"
 	"github.com/mdelapenya/junit2otlp/internal/scm"
-	"github.com/mdelapenya/junit2otlp/internal/transform"
 )
 
 func main() {
@@ -27,12 +27,8 @@ func main() {
 }
 
 func Run(ctx context.Context, cfg *config.Config, reader readers.InputReader) error {
-	suites, err := readers.ReadJUnitReport(reader)
-	if err != nil {
-		return fmt.Errorf("failed to read JUnit report: %w", err)
-	}
-
-	// setup the otel otelProvider
+	// setup the otel provider
+	ctx = otel.InitOtelContext(ctx)
 	otelProvider, err := otel.NewProvider(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create otel provider: %w", err)
@@ -57,7 +53,7 @@ func Run(ctx context.Context, cfg *config.Config, reader readers.InputReader) er
 	runtimeAttributes = append(runtimeAttributes, cfg.AdditionalAttributes...)
 
 	// transform and load the JUnit report into OTLP
-	err = transform.TransformAndLoadSuites(ctx, cfg, otelProvider, suites, runtimeAttributes)
+	err = junit.ExtractTransformAndLoadReport(ctx, cfg, reader, runtimeAttributes, otelProvider)
 	if err != nil {
 		return err
 	}
