@@ -1,4 +1,4 @@
-package main
+package otel
 
 const (
 	Junit2otlp = "junit2otlp"

@@ -1,4 +1,4 @@
-package main
+package scm
 
 import (
 	"testing"
@@ -156,7 +156,7 @@ func TestCheckGitContext(t *testing.T) {
 
 func TestGetScm(t *testing.T) {
 	t.Run("This project uses Git", func(t *testing.T) {
-		scm := GetScm(getDefaultwd())
+		scm := GetScm("../../")
 		switch scm.(type) {
 		case *GitScm:
 			// NOOP
