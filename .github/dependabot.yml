@@ -1,5 +1,17 @@
 version: 2
 updates:
+  - package-ecosystem: github-actions
+    assignees:
+      - "mdelapenya"
+    commit-message:
+      prefix: "deps:"
+    directory: "/"
+    labels:
+      - "dependencies"
+    reviewers:
+      - "mdelapenya"
+    schedule:
+      interval: monthly
   - package-ecosystem: gomod
     assignees:
       - "mdelapenya"
@@ -11,7 +23,7 @@ updates:
     reviewers:
       - "mdelapenya"
     schedule:
-      interval: daily
+      interval: monthly
   - package-ecosystem: docker
     assignees:
       - "mdelapenya"
@@ -23,4 +35,4 @@ updates:
     reviewers:
       - "mdelapenya"
     schedule:
-      interval: daily
+      interval: monthly
