@@ -1,4 +1,4 @@
-package main
+package scm
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/mdelapenya/junit2otlp/internal/otel"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -84,7 +85,7 @@ func (r *FakeGitRepo) withBranch(branchName string) *FakeGitRepo {
 	return r
 }
 
-func (r *FakeGitRepo) addingFile(file string) *FakeGitRepo {
+func (r *FakeGitRepo) addingFile(src, dest string) *FakeGitRepo {
 	workTree, err := r.repo.Worktree()
 	if err != nil {
 		r.t.Errorf(">> could not retrieve worktree: %v", err)
@@ -92,8 +93,8 @@ func (r *FakeGitRepo) addingFile(file string) *FakeGitRepo {
 	}
 
 	// copy sample file
-	sampleFile := path.Join(workingDir, file)
-	targetFile := path.Join(tempDir, file)
+	sampleFile := path.Join(workingDir, src)
+	targetFile := path.Join(tempDir, dest)
 
 	sourceFileStat, err := os.Stat(sampleFile)
 	if err != nil {
@@ -126,7 +127,7 @@ func (r *FakeGitRepo) addingFile(file string) *FakeGitRepo {
 		return r
 	}
 
-	_, err = workTree.Add(file)
+	_, err = workTree.Add(dest)
 	if err != nil {
 		r.t.Errorf(">> could not git-add the file")
 		return r
@@ -244,11 +245,11 @@ func TestGit_ContributeAttributesCloneOptions(t *testing.T) {
 				t.FailNow()
 			}
 
-			atts := scm.contributeAttributes()
+			atts := scm.ContributeAttributes()
 
 			// shallow clone depth is 3
-			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 3) }, "should be set as scm.git.clone.depth=3. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, true) }, "should be set as scm.git.clone.shallow=true. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitCloneDepth, 3) }, "should be set as scm.git.clone.depth=3. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, otel.GitCloneShallow, true) }, "should be set as scm.git.clone.shallow=true. Attributes: %v", atts)
 		})
 	}
 
@@ -293,30 +294,32 @@ func TestGit_ContributeAttributesForChangeRequests(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).
+				addingFile("../../TEST-sample2.xml", "TEST-sample2.xml").removingFile("README").
+				withCommit("This is a test commit").read()
 			if scm == nil {
 				t.FailNow()
 			}
 
-			atts := scm.contributeAttributes()
+			atts := scm.ContributeAttributes()
 
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 
 			if scm.changeRequest {
 				// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
-				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
-				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
+				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 			}
 
-			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, otel.GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmBranch, branchName) }, "should be set as scm.branch. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 			require.Condition(t, func() bool {
-				return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
+				return keyExistsWithValue(t, atts, otel.ScmRepository, "https://github.com/octocat/hello-world")
 			}, "Remote should be set as scm.repository. Attributes: %v", atts)
 		})
 	}
@@ -363,24 +366,24 @@ func TestGit_ContributeAttributesForBranches(t *testing.T) {
 				t.FailNow()
 			}
 
-			atts := scm.contributeAttributes()
+			atts := scm.ContributeAttributes()
 
-			require.Condition(t, func() bool { return !keyExists(t, atts, ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
-			require.Condition(t, func() bool { return !keyExists(t, atts, ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
+			require.Condition(t, func() bool { return !keyExists(t, atts, otel.ScmAuthors) }, "Authors shouldn't be set as scm.authors. Attributes: %v", atts)
+			require.Condition(t, func() bool { return !keyExists(t, atts, otel.ScmCommitters) }, "Committers shouldn't be set as scm.committers. Attributes: %v", atts)
 
 			if scm.changeRequest {
-				require.Condition(t, func() bool { return !keyExists(t, atts, GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
-				require.Condition(t, func() bool { return !keyExists(t, atts, GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
-				require.Condition(t, func() bool { return !keyExists(t, atts, GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
+				require.Condition(t, func() bool { return !keyExists(t, atts, otel.GitAdditions) }, "Additions shouldn't be as scm.git.additions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return !keyExists(t, atts, otel.GitDeletions) }, "Deletions shouldn't be as scm.git.deletions. Attributes: %v", atts)
+				require.Condition(t, func() bool { return !keyExists(t, atts, otel.GitModifiedFiles) }, "Modified files shouldn't be as scm.git.modified.files. Attributes: %v", atts)
 			}
 
-			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
-			require.Condition(t, func() bool { return !keyExistsWithValue(t, atts, ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitCloneDepth, 0) }, "should be set as scm.git.clone.depth=0. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithBoolValue(t, atts, otel.GitCloneShallow, false) }, "should be set as scm.git.clone.shallow=false. Attributes: %v", atts)
+			require.Condition(t, func() bool { return !keyExistsWithValue(t, atts, otel.ScmBaseRef, "master") }, "should be set as scm.baseRef. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmBranch, "master") }, "Branch should be set as scm.branch. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmType, "git") }, "Git should be set as scm.type. Attributes: %v", atts)
 			require.Condition(t, func() bool {
-				return keyExistsWithValue(t, atts, ScmRepository, "https://github.com/octocat/hello-world")
+				return keyExistsWithValue(t, atts, otel.ScmRepository, "https://github.com/octocat/hello-world")
 			}, "Remote should be set as scm.repository. Attributes: %v", atts)
 		})
 	}
@@ -426,7 +429,8 @@ func TestGit_ContributeCommitters(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").withCommit("This is a test commit").read()
+			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).
+				addingFile("../../TEST-sample2.xml", "TEST-sample2.xml").withCommit("This is a test commit").read()
 			if scm == nil {
 				t.FailNow()
 			}
@@ -443,8 +447,8 @@ func TestGit_ContributeCommitters(t *testing.T) {
 
 			require.Equal(t, 2, len(atts))
 			// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmAuthors, "author@test.com") }, "Authors should be set as scm.authors. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithValue(t, atts, otel.ScmCommitters, "committer@test.com") }, "Committers should be set as scm.committers. Attributes: %v", atts)
 		})
 	}
 
@@ -489,7 +493,9 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).
+				addingFile("../../TEST-sample2.xml", "TEST-sample2.xml").removingFile("README").
+				withCommit("This is a test commit").read()
 			if scm == nil {
 				t.FailNow()
 			}
@@ -507,9 +513,9 @@ func TestGit_ContributeFilesAndLines(t *testing.T) {
 
 			require.Equal(t, 3, len(atts))
 			// we are adding 1 file with 202 lines, and we are deleting 1 file with 1 line
-			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
-			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitAdditions, 202) }, "Additions should be set as scm.git.additions. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitDeletions, 1) }, "Deletions should be set as scm.git.deletions. Attributes: %v", atts)
+			require.Condition(t, func() bool { return keyExistsWithIntValue(t, atts, otel.GitModifiedFiles, 2) }, "Modified files should be set as scm.git.modified.files. Attributes: %v", atts)
 		})
 	}
 
@@ -554,7 +560,9 @@ func TestGit_CalculateCommitsForChangeRequests(t *testing.T) {
 				t.Setenv(k, v)
 			}
 
-			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).addingFile("TEST-sample2.xml").removingFile("README").withCommit("This is a test commit").read()
+			scm := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{})).withBranch(branchName).
+				addingFile("../../TEST-sample2.xml", "TEST-sample2.xml").removingFile("README").
+				withCommit("This is a test commit").read()
 			if scm == nil {
 				t.FailNow()
 			}
