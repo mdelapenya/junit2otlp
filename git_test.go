@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"path"
 	"testing"
@@ -617,6 +618,84 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 			}
 
 			require.Equal(t, headCommit, targetCommit)
+		})
+	}
+
+	for _, td := range tests {
+		runTests(t, td)
+	}
+}
+
+func TestGit_RedactedRepositoryURL(t *testing.T) {
+	t.Setenv("GITHUB_SHA", "")
+	tp, err := NewTestProxy("https://github.com/octocat/hello-world.git")
+	if err != nil {
+		t.Error(err)
+	}
+	defer tp.Close()
+	repoURL, err := url.Parse(tp.URL())
+	if err != nil {
+		t.Error(err)
+	}
+	repoURL.User = url.UserPassword("username", "password")
+	log.Println(repoURL)
+
+	type testData struct {
+		provider string
+		env      map[string]string
+	}
+
+	tests := []testData{
+		{
+			provider: "local",
+			env: map[string]string{
+				"BRANCH": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+		{
+			provider: "jenkins",
+			env: map[string]string{
+				"JENKINS_URL":   "http://local.jenkins.org",
+				"BRANCH_NAME":   "master",
+				"GIT_COMMIT":    "HEAD",
+				"CHANGE_TARGET": "master", // master branch is the base branch for the fake repository (octocat/hello-world)
+			},
+		},
+	}
+
+	runTests := func(t *testing.T, td testData) {
+		t.Run(td.provider, func(t *testing.T) {
+			for k, v := range td.env {
+				t.Setenv(k, v)
+			}
+
+			repo := NewFakeGitRepo(t, WithCloneOptions(CloneOptionsRequest{
+				URL: repoURL.String(),
+			}))
+			if repo == nil {
+				t.FailNow()
+			}
+			scm := repo.read()
+			if scm == nil {
+				t.FailNow()
+			}
+
+			headCommit, targetCommit, err := scm.calculateCommits()
+			if err != nil {
+				t.Error()
+			}
+
+			require.Equal(t, headCommit, targetCommit)
+
+			attr := scm.contributeAttributes()
+			found := false
+			for _, a := range attr {
+				if a.Key == ScmRepository {
+					found = true
+					require.NotContains(t, a.Value.AsStringSlice(), "password", "Repository URL contains password!")
+				}
+			}
+			require.True(t, found, "Attribute %v not found!", ScmRepository)
 		})
 	}
 
