@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -29,12 +28,6 @@ func NewTestProxy(targetURL string) (*TestProxy, error) {
 		originalDirector(req)
 		req.Header.Del("Authorization")
 		req.Host = target.Host
-		log.Printf("Request: %v %v", req.Method, req.URL)
-	}
-	tp.proxy.ModifyResponse = func(r *http.Response) error {
-		log.Printf("Response: %v %v", r.StatusCode, r.Status)
-		log.Printf("Location: %v", r.Header.Get("Location"))
-		return nil
 	}
 	tp.server = httptest.NewServer(tp.proxy)
 	return tp, nil
