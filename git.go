@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 
 	git "github.com/go-git/go-git/v5"
@@ -117,7 +118,16 @@ func (scm *GitScm) contributeAttributes() []attribute.KeyValue {
 	if err != nil {
 		return gitAttributes
 	}
-	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(origin.Config().URLs))
+
+	// Redact passwords from repository URLs
+	repos := make([]string, len(origin.Config().URLs))
+	for _, x := range origin.Config().URLs {
+		u, err := url.Parse(x)
+		if err == nil {
+			repos = append(repos, u.Redacted())
+		}
+	}
+	gitAttributes = append(gitAttributes, attribute.Key(ScmRepository).StringSlice(repos))
 
 	// do not read HEAD, and simply use the branch name coming from the SCM struct
 	gitAttributes = append(gitAttributes, attribute.Key(ScmBranch).String(scm.branchName))
