@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -692,7 +693,20 @@ func TestGit_RedactedRepositoryURL(t *testing.T) {
 			for _, a := range attr {
 				if a.Key == ScmRepository {
 					found = true
-					require.NotContains(t, a.Value.AsStringSlice(), "password", "Repository URL contains password!")
+					require.Condition(t, func() (success bool) {
+						found := false
+						for _, v := range a.Value.AsStringSlice() {
+							found = found || strings.Contains(v, "password")
+						}
+						return !found
+					}, "Repository URL contains password!")
+					require.Condition(t, func() (success bool) {
+						found := false
+						for _, v := range a.Value.AsStringSlice() {
+							found = found || strings.Contains(v, "username")
+						}
+						return found
+					}, "Repository URL does not contain username!")
 				}
 			}
 			require.True(t, found, "Attribute %v not found!", ScmRepository)
