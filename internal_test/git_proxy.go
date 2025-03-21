@@ -1,4 +1,4 @@
-package main
+package internal_test
 
 import (
 	"net/http"

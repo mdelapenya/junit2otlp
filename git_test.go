@@ -14,6 +14,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/mdelapenya/junit2otlp/internal_test"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -629,7 +630,7 @@ func TestGit_CalculateCommitsForBranches(t *testing.T) {
 
 func TestGit_RedactedRepositoryURL(t *testing.T) {
 	t.Setenv("GITHUB_SHA", "")
-	tp, err := NewTestProxy("https://github.com/octocat/hello-world.git")
+	tp, err := internal_test.NewTestProxy("https://github.com/octocat/hello-world.git")
 	if err != nil {
 		t.Error(err)
 	}
