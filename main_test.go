@@ -140,46 +140,33 @@ func setupRuntimeDependencies(t *testing.T) (context.Context, string, testcontai
 	testcontainers.CleanupNetwork(t, nw)
 	require.NoError(t, err)
 
-	networkName := nw.Name
-
-	jaeger, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image: "jaegertracing/all-in-one:latest",
-			ExposedPorts: []string{
-				"14250/tcp",
-				"14268/tcp",
-				"16686/tcp",
-			},
-			Networks: []string{networkName},
-		},
-		Started: true,
-	})
+	jaeger, err := testcontainers.Run(
+		ctx, "jaegertracing/all-in-one:latest",
+		testcontainers.WithExposedPorts("14250/tcp", "14268/tcp", "16686/tcp"),
+		network.WithNetwork([]string{"jaeger"}, nw),
+	)
 	testcontainers.CleanupContainer(t, jaeger)
 	require.NoError(t, err)
 
-	otelCollector, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image: "otel/opentelemetry-collector-contrib-dev:93a9885459c9406db8ac446f77f290b02542e8d5",
-			ExposedPorts: []string{
-				"1888/tcp",  // pprof extension
-				"13133/tcp", // health_check extension
-				"4317/tcp",  // OTLP gRPC receiver
-				"55679/tcp", // zpages extension
-			},
-			Files: []testcontainers.ContainerFile{
-				{
-					ContainerFilePath: "/etc/otel/config.yaml",
-					HostFilePath:      filepath.Join("testdata", "otel-collector-config.yml"),
-				},
-				{
-					Reader:            reportFile,
-					ContainerFilePath: "/tmp/tests.json",
-				},
-			},
-			WaitingFor: wait.ForListeningPort("4317/tcp"),
+	otelCollector, err := testcontainers.Run(
+		ctx, "otel/opentelemetry-collector-contrib-dev:93a9885459c9406db8ac446f77f290b02542e8d5",
+		testcontainers.WithExposedPorts(
+			"1888/tcp",  // pprof extension
+			"13133/tcp", // health_check extension
+			"4317/tcp",  // OTLP gRPC receiver
+			"55679/tcp", // zpages extension
+		),
+		testcontainers.WithFiles(testcontainers.ContainerFile{
+			ContainerFilePath: "/etc/otel/config.yaml",
+			HostFilePath:      filepath.Join("testdata", "otel-collector-config.yml"),
 		},
-		Started: true,
-	})
+			testcontainers.ContainerFile{
+				Reader:            reportFile,
+				ContainerFilePath: "/tmp/tests.json",
+			},
+		),
+		testcontainers.WithWaitStrategy(wait.ForListeningPort("4317/tcp")),
+	)
 	testcontainers.CleanupContainer(t, otelCollector)
 	require.NoError(t, err)
 
