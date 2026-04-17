@@ -3,7 +3,7 @@ module github.com/mdelapenya/junit2otlp
 go 1.25.0
 
 require (
-	github.com/go-git/go-git/v5 v5.17.1
+	github.com/go-git/go-git/v5 v5.18.0
 	github.com/joshdk/go-junit v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
